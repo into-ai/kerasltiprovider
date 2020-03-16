@@ -23,7 +23,18 @@ try:
 except (ImportError, AssertionError):
     long_description = short_description
 
-requirements = ["Click>=6.0"]
+requirements = [
+    "Click>=6.0",
+    "tensorflow>=2.1.0",
+    "flask",
+    "numpy",
+    "redis",
+    "jaeger-client",
+    "prometheus-client",
+    "waitress",
+    "lti",
+    "pylti",
+]
 test_requirements = [
     "tox",
     "pytest",

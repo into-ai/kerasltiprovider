@@ -36,7 +36,7 @@ fakeredis = "*"
 kerasltiprovider = {path = ".",editable = true}
 flask = "*"
 numpy = "*"
-tensorflow = "*"
+tensorflow = ">=2.1.0"
 redis = "*"
 jaeger-client = "*"
 prometheus-client = "*"
