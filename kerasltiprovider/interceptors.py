@@ -31,19 +31,19 @@ ErrType = typing.Dict[str, typing.Any]
 ErrResultType = typing.Tuple[str, int, MIMEType]
 
 
-def error_handler(_exception: typing.Optional[ErrType] = None) -> RequestResultType:
+def error_handler(exception: typing.Optional[ErrType] = None) -> RequestResultType:
     """ render error page
     :param exception: optional exception
     :return: the error.html template rendered
     """
     with Tracer.main().start_active_span("error_handler") as scope:
-        exception = _exception or dict()
-        exc = exception.get("exception", Exception)
+        _exception = exception or dict()
+        exc = _exception.get("exception", Exception)
         status_code = getattr(exc, "status", 500)
         message = "The requested operation could not be completed"
         user_id = None
 
-        scope.span.log_kv(dict(exception=exception, exc=exc, status_code=status_code,))
+        scope.span.log_kv(dict(exception=_exception, exc=exc, status_code=status_code,))
 
         # More detailed error messages for LTI issues
         if isinstance(exc, pylti.common.LTINotInSessionException):
