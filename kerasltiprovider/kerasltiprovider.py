@@ -59,7 +59,7 @@ class KerasLTIProvider:
 
     def register_blueprint(self) -> None:
         # Register the blueprint
-        base_path = self.app.config.get("BASE_PATH") or "/"
+        base_path = self.app.config.get("BLUEPRINT_PATH") or "/"
 
         self.app.register_blueprint(self.blueprint(), url_prefix=base_path)
 

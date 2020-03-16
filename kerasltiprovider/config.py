@@ -28,8 +28,14 @@ JAEGER_PORT = os.environ.get("JAEGER_PORT", 6831)
 PORT = os.environ.get("PORT", 3000)
 HOST = os.environ.get("HOST", "0.0.0.0")
 
-# Base path the service will be running at in production
-BASE_PATH = os.environ.get("BASE_PATH", "/")
+# Path to register the blueprint under
+# This does not make sense with env vars but when
+BLUEPRINT_PATH = "/"
+
+# Where the service will be running at in production
+PUBLIC_PORT = os.environ.get("PUBLIC_PORT") or PORT
+PUBLIC_HOST = os.environ.get("PUBLIC_HOST") or HOST
+PUBLIC_PATH = os.environ.get("PUBLIC_PATH") or BLUEPRINT_PATH
 
 # Enable or disable production mode
 PRODUCTION = os.environ.get("PRODUCTION", "True")
@@ -110,5 +116,8 @@ ENABLE_DEBUG_LAUNCHER = os.environ.get("ENABLE_DEBUG_LAUNCHER", "False")
 # Inferred values
 #
 
-SAFE_BASE_PATH = "/".join([c for c in BASE_PATH.split("/") if len(c) > 0])
-PUBLIC_URL = f"http://{HOST}:{PORT}{SAFE_BASE_PATH}"
+SAFE_PUBLIC_PATH = "/".join([c for c in PUBLIC_PATH.split("/") if len(c) > 0])
+PUBLIC_URL = (
+    os.environ.get("PUBLIC_URL")
+    or f"http://{PUBLIC_HOST}:{PUBLIC_PORT}{SAFE_PUBLIC_PATH}"
+)

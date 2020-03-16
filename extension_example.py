@@ -41,6 +41,7 @@ provider_config = dict(
     ENABLE_DEBUG_LAUNCHER=True,
     TEMPLATE_PREFIX="",
     # You need to pass the PUBLIC_URL for redirects to work
+    # Additionally we force http here
     PUBLIC_URL="http://localhost:8080/",
 )
 
@@ -51,7 +52,7 @@ provider = KerasLTIProvider(
 
 # This example shows how to integrate the blueprint into any flask project
 # To add the required routes, just register the blueprint
-app.register_blueprint(provider.blueprint(), url_prefix="/")  # kerasltiprovider
+app.register_blueprint(provider.blueprint(), url_prefix="/kerasltiprovider")
 
 
 @app.route("/launch")

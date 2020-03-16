@@ -4,16 +4,17 @@ services:
   ltiprovider:
     build: ../
     ports:
-      - 8080:8080
+      - 8080:4000
     environment:
       ASSIGNMENTS_PY_CONFIG: /config/assignments.py
       ENABLE_DEBUG_LAUNCHER: "true"
       PRODUCTION: "false"
-      PORT: 8080
+      PORT: 4000
       PROVIDER_NAME: "into-ai"
       FLASK_SECRET_KEY: 123456
       CONSUMER_KEY_SECRET: 123456
-      PUBLIC_URL: https://localhost:8080
+      # Must override to enforce http here
+      PUBLIC_URL: http://localhost:8080
       JAEGER_HOST: jaegeragent
       JAEGER_PORT: 6831
       REDIS_HOST: redis
