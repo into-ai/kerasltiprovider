@@ -62,8 +62,9 @@ def lint(c):
 def test(c, min_coverage=None):
     """Run tests
     """
+    test_env = "FLASK_SECRET_KEY=123 CONSUMER_KEY_SECRET=123"
     pytest_options = "--cov-fail-under={}".format(min_coverage) if min_coverage else ""
-    c.run("FLASK_SECRET_KEY=123 pipenv run pytest --cov={} {}".format(SOURCE_DIR, pytest_options))
+    c.run("{} pipenv run pytest --cov={} {}".format(test_env, SOURCE_DIR, pytest_options))
 
 
 @task
