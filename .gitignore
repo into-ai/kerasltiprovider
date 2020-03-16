@@ -1,6 +1,9 @@
 .DS_Store
 .idea/
 .vscode/
+certs/
+*.pem
+*.key
 *.rdb
 
 # Byte-compiled / optimized / DLL files

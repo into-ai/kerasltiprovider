@@ -66,18 +66,27 @@ PROVIDER_LOGO_URI = os.environ.get("PROVIDER_LOGO_URI")
 CONSUMER_NAME = os.environ.get("CONSUMER_NAME", "consumer")
 
 # PEM file containing the consumers secret key
-CONSUMER_KEY_PEM_FILE = pathlib.Path(wd) / pathlib.Path("certs/ca-key.pem")
+CONSUMER_KEY_PEM_FILE = (
+    pathlib.Path(wd) / pathlib.Path("certs/ca-key.pem")
+    if not os.environ.get("CONSUMER_KEY_PEM_FILE")
+    else pathlib.Path(str(os.environ.get("CONSUMER_KEY_PEM_FILE")))
+)
 
-# Consumers secret key
-CONSUMER_KEY_SECRET = os.environ.get("CONSUMER_KEY_SECRET", "123456")
+# Consumers secret key with higher precedence
+CONSUMER_KEY_SECRET = os.environ.get("CONSUMER_KEY_SECRET")
 
+# Check if either secret or PEM file were provided
+if not (CONSUMER_KEY_PEM_FILE.is_file() or CONSUMER_KEY_SECRET is not None):
+    raise ValueError("Missing consumer secret")
 
-# Might remove?
-dirname = os.path.dirname(CONSUMER_KEY_PEM_FILE)
-if not os.path.exists(dirname):
-    os.makedirs(dirname)
-with open(CONSUMER_KEY_PEM_FILE, "w+") as pem_file:
-    pem_file.write(os.environ.get("CONSUMER_KEY_CERT", "123456"))
+# Write consumer secret to cert file
+try:
+    CONSUMER_KEY_PEM_FILE.parent.mkdir()
+except FileExistsError:
+    pass
+if CONSUMER_KEY_SECRET:
+    with open(CONSUMER_KEY_PEM_FILE, "w+") as pem_file:
+        pem_file.write(CONSUMER_KEY_SECRET)
 
 # Config used by the pylti flask plugin
 # This might be overridden with a user level config
