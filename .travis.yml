@@ -3,7 +3,6 @@ os: linux
 install: pip install --no-cache-dir -U tox-travis
 script: tox
 python:
-- 3.8
 - 3.7
 - 3.6
 jobs:
