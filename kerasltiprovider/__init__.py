@@ -5,3 +5,7 @@
 __author__ = """into-ai"""
 __email__ = "introintoai@gmail.com"
 __version__ = "0.1.0"
+
+from kerasltiprovider.kerasltiprovider import KerasLTIProvider as _provider
+
+KerasLTIProvider = _provider

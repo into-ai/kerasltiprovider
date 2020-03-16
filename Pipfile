@@ -14,7 +14,7 @@ black = "==19.10b0"
 isort = "*"
 # Testing
 tox = "*"
-pytest = "*"
+pytest = "<5.4.0"
 pytest-cov = "*"
 pytest-xdist = "*"
 pytest-sugar = "*"
@@ -30,6 +30,16 @@ invoke = "*"
 m2r = "*"
 twine = "*"
 bump2version = "*"
+fakeredis = "*"
 
 [packages]
-kerasltiprovider = {path = ".", editable = true}
+kerasltiprovider = {path = ".",editable = true}
+flask = "*"
+numpy = "*"
+tensorflow = "*"
+redis = "*"
+jaeger-client = "*"
+prometheus-client = "*"
+waitress = "*"
+lti = "*"
+pylti = "*"

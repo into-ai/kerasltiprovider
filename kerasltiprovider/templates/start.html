@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Welcome to the {{ provider_name }} LTI Provider{% endblock %}
+{% block styling %}
+<style lang="css">
+		html,
+body {
+  height: 100%;
+}
+
+body {
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-align: center;
+  align-items: center;
+  padding-top: 40px;
+  padding-bottom: 40px;
+  background-color: #ffffff;
+}
+
+.form-signin {
+  width: 100%;
+  max-width: 800px;
+  padding: 15px;
+  margin: auto;
+}
+
+.form-label-group {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.form-label-group > input,
+.form-label-group > label {
+  height: 3.125rem;
+  padding: .75rem;
+}
+
+.form-label-group > label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  margin-bottom: 0; /* Override default `<label>` margin */
+  line-height: 1.5;
+  color: #495057;
+  pointer-events: none;
+  cursor: text; /* Match the input under the label */
+  border: 1px solid transparent;
+  border-radius: .25rem;
+  transition: all .1s ease-in-out;
+}
+
+.form-label-group input::-webkit-input-placeholder {
+  color: transparent;
+}
+
+.form-label-group input:-ms-input-placeholder {
+  color: transparent;
+}
+
+.form-label-group input::-ms-input-placeholder {
+  color: transparent;
+}
+
+.form-label-group input::-moz-placeholder {
+  color: transparent;
+}
+
+.form-label-group input::placeholder {
+  color: transparent;
+}
+
+.form-label-group input:not(:placeholder-shown) {
+  padding-top: 1.25rem;
+  padding-bottom: .25rem;
+}
+
+.form-label-group input:not(:placeholder-shown) ~ label {
+  padding-top: .25rem;
+  padding-bottom: .25rem;
+  font-size: 12px;
+  color: #777;
+}
+
+/* Fallback for Edge
+-------------------------------------------------- */
+@supports (-ms-ime-align: auto) {
+  .form-label-group > label {
+    display: none;
+  }
+  .form-label-group input::-ms-input-placeholder {
+    color: #777;
+  }
+}
+
+/* Fallback for IE
+-------------------------------------------------- */
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+  .form-label-group > label {
+    display: none;
+  }
+  .form-label-group input:-ms-input-placeholder {
+    color: #777;
+  }
+}
+</style>
+{% endblock %}
+{% block content %}
+<form class="form-signin">
+	<div class="text-center mb-4">
+		{% if logo_uri is not none %}
+				<img class="mb-4" src="{{ logo_uri }}" alt="" height="72">
+		{%endif %}
+		<h1 class="h3 mb-3 font-weight-normal">Welcome {{ username }}</h1>
+	</div>
+
+	<div>
+		<p>
+			You have solved the assignment
+			<blockquote class=" text-center">
+				<strong>{{ assignment_name }}</strong> <small class="text-muted">#{{ assignment_id }}</small>
+			</blockquote>
+			and would like to submit your results?
+		</p>
+		<p>
+			To submit <mark>copy and paste</mark> the following code snippet at the end of the code you used to train your model.
+			Make sure to change the <code class="python">model</code> variable to the name of your keras model!
+		</p>
+	</div>
+
+	<pre><code class="python">{{ code_snippet }}</code></pre>
+	<button type="button" class="btn btn-lg btn-primary btn-block" data-clipboard-text="{{ code_snippet }}">Copy to clipboard!</button>
+	<p class="mt-5 mb-3 text-muted text-center">{{ provider_name }} {{ now.year }}</p>
+</form>
+{% endblock %}

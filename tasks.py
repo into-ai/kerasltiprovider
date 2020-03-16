@@ -63,7 +63,7 @@ def test(c, min_coverage=None):
     """Run tests
     """
     pytest_options = "--cov-fail-under={}".format(min_coverage) if min_coverage else ""
-    c.run("pipenv run pytest --cov={} {}".format(SOURCE_DIR, pytest_options))
+    c.run("FLASK_SECRET_KEY=123 pipenv run pytest --cov={} {}".format(SOURCE_DIR, pytest_options))
 
 
 @task

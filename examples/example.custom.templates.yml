@@ -1,0 +1,25 @@
+version: "3.6"
+
+services:
+  ltiprovider:
+    build: ../
+    ports:
+      - 8080:8080
+    environment:
+      ASSIGNMENTS_PY_CONFIG: /config/assignments.py
+      ENABLE_DEBUG_LAUNCHER: "true"
+      PRODUCTION: "false"
+      PORT: 8080
+      PROVIDER_NAME: "into-ai"
+      FLASK_SECRET_KEY: 123456
+      PUBLIC_URL: https://localhost:8080
+      JAEGER_HOST: jaegeragent
+      JAEGER_PORT: 6831
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      # custom templates can overwrite default ones but need to remain at /templates
+      - ./custom-templates/start.html:/templates/start.html:ro
+      - ./custom-templates/launch.html:/templates/launch.html:ro
+      - ./custom-templates/code.jinja2:/templates/code.jinja2:ro
+      - ./sample_assignments.py:/config/assignments.py:ro
