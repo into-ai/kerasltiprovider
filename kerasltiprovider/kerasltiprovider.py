@@ -53,15 +53,11 @@ class KerasLTIProvider:
     ) -> KLTIPType:
         app = Flask(__name__)
         provider = cls(app, assignments, lti_config, config)
-
-        provider.register_blueprint()
+        base_path = app.config.get("BLUEPRINT_PATH") or "/"
+        # Set the template directory
+        app.template_folder = app.config.get("TEMPLATE_DIR") or app.template_folder
+        app.register_blueprint(provider.blueprint(), url_prefix=base_path)
         return provider
-
-    def register_blueprint(self) -> None:
-        # Register the blueprint
-        base_path = self.app.config.get("BLUEPRINT_PATH") or "/"
-
-        self.app.register_blueprint(self.blueprint(), url_prefix=base_path)
 
     def check_assignments(
         self, assignments: typing.Optional[typing.List[KerasAssignment]]
