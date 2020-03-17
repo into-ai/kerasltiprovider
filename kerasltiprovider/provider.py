@@ -196,7 +196,7 @@ def launch() -> RequestResultType:
                 f"Cannot create launch URL from PUBLIC_URL={public_url} and PATH={url}"
             )
         consumer = ToolConsumer(
-            consumer_key=current_app.config.get("CONSUMER_NAME"),
+            consumer_key=current_app.config.get("CONSUMER_KEY"),
             consumer_secret=current_app.config.get("CONSUMER_KEY_SECRET"),
             launch_url=slash_join(str(public_url), str(url)),
             params=dict(

@@ -40,6 +40,9 @@ PUBLIC_PATH = os.environ.get("PUBLIC_PATH") or BLUEPRINT_PATH
 # Enable or disable production mode
 PRODUCTION = os.environ.get("PRODUCTION", "True")
 
+# Set the log level
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
 # ENABLE_ABSOLUTE_INPUT_ENDPOINT_URL
 ENABLE_ABSOLUTE_INPUT_ENDPOINT_URL = os.environ.get(
     "ENABLE_ABSOLUTE_INPUT_ENDPOINT_URL", "False"
@@ -69,7 +72,7 @@ PROVIDER_NAME = os.environ.get("PROVIDER_NAME", "KerasLTIProvider")
 PROVIDER_LOGO_URI = os.environ.get("PROVIDER_LOGO_URI")
 
 # Name of the accepted tool consumer
-CONSUMER_NAME = os.environ.get("CONSUMER_NAME", "consumer")
+CONSUMER_KEY = os.environ.get("CONSUMER_KEY", "consumer")
 
 # PEM file containing the consumers secret key
 CONSUMER_KEY_PEM_FILE = (
@@ -83,7 +86,7 @@ CONSUMER_KEY_SECRET = os.environ.get("CONSUMER_KEY_SECRET")
 
 # Check if either secret or PEM file were provided
 if not (CONSUMER_KEY_PEM_FILE.is_file() or CONSUMER_KEY_SECRET is not None):
-    raise ValueError("Missing consumer secret")
+    raise ValueError("Missing CONSUMER_KEY_SECRET")
 
 # Write consumer secret to cert file
 try:
@@ -98,7 +101,8 @@ if CONSUMER_KEY_SECRET:
 # This might be overridden with a user level config
 PYLTI_CONFIG = dict(
     consumers={
-        CONSUMER_NAME: dict(secret=CONSUMER_KEY_SECRET, cert=CONSUMER_KEY_PEM_FILE)
+        CONSUMER_KEY: dict(secret=CONSUMER_KEY_SECRET)
+        # cert=CONSUMER_KEY_PEM_FILE)
     }
 )
 

@@ -2,6 +2,7 @@
 
 """Main module."""
 
+import logging
 import os
 import typing
 
@@ -31,6 +32,7 @@ class KerasLTIProvider:
         """Create or use an existing app"""
         self.app = app
         self.load_config(config, lti_config)
+        self.setup_logging()
         self.check_assignments(assignments)
         self.connect_tracer()
         self.connect_redis()
@@ -43,6 +45,10 @@ class KerasLTIProvider:
             self.app.logger.info("Creating validation hash table for assignments")
             for a in context.assignments:
                 a.save_validation_hash_table()
+
+    def setup_logging(self) -> None:
+        level = self.app.config.get("LOG_LEVEL") or "INFO"
+        logging.getLogger("pylti").setLevel(level.upper())
 
     @classmethod
     def create(
