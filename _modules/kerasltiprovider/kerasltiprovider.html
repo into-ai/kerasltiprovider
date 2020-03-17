@@ -157,6 +157,7 @@
 
 <span class="sd">&quot;&quot;&quot;Main module.&quot;&quot;&quot;</span>
 
+<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">typing</span>
 
@@ -186,6 +187,7 @@
         <span class="sd">&quot;&quot;&quot;Create or use an existing app&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">app</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">lti_config</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setup_logging</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_assignments</span><span class="p">(</span><span class="n">assignments</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">connect_tracer</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">connect_redis</span><span class="p">()</span>
@@ -198,6 +200,10 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating validation hash table for assignments&quot;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">assignments</span><span class="p">:</span>
                 <span class="n">a</span><span class="o">.</span><span class="n">save_validation_hash_table</span><span class="p">()</span>
+
+<div class="viewcode-block" id="KerasLTIProvider.setup_logging"><a class="viewcode-back" href="../../kerasltiprovider.html#kerasltiprovider.kerasltiprovider.KerasLTIProvider.setup_logging">[docs]</a>    <span class="k">def</span> <span class="nf">setup_logging</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;LOG_LEVEL&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;INFO&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;pylti&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">level</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="KerasLTIProvider.create"><a class="viewcode-back" href="../../kerasltiprovider.html#kerasltiprovider.kerasltiprovider.KerasLTIProvider.create">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">create</span><span class="p">(</span>
