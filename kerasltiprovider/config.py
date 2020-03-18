@@ -62,6 +62,9 @@ LAUNCH_ASSIGNMENT_ID_PARAM = os.environ.get(
     "LAUNCH_ASSIGNMENT_ID_PARAM", "custom_x-assignment-id"
 )
 
+USER_TOKEN_EXPIRE_HOURS = os.environ.get("USER_TOKEN_EXPIRE_HOURS") or 48
+ENABLE_TOKEN_FROM_USER_ID = os.environ.get("ENABLE_TOKEN_FROM_USER_ID", "False")
+
 # Flask secret key for secure session management
 SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
 if not SECRET_KEY:

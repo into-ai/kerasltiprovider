@@ -1,5 +1,6 @@
 import datetime
 import functools
+import hashlib
 import json
 import logging
 import traceback
@@ -63,7 +64,6 @@ def error_handler(exception: typing.Optional[ErrType] = None) -> RequestResultTy
 
         # Use default error message on unknown errors
         else:
-            # raise exc
             log.error(exc)
 
         scope.span.log_kv(dict(message=message))
@@ -173,6 +173,9 @@ def get_or_create_user(
         }
     )
     user_token = str(uuid.uuid4())
+    if str(current_app.config.get("ENABLE_TOKEN_FROM_USER_ID")).lower() == "true":
+        test = "606baa09-d5a4-4f6c-b2ad-b0c1608b392a"
+        user_token = str(hashlib.md5(test.encode("utf-8")).hexdigest())
 
     span.set_tag("user_id", user_id)
     span.set_tag("assignment_id", assignment_id)
@@ -182,8 +185,11 @@ def get_or_create_user(
 
     if not Database.users:
         raise NoDatabaseException
-    Database.users.setex(user_id, datetime.timedelta(hours=48), user_token)
-    Database.users.setex("session:" + user_token, datetime.timedelta(hours=48), session)
+    expire_hours = int(current_app.config.get("USER_TOKEN_EXPIRE_HOURS") or 48)
+    Database.users.setex(user_id, datetime.timedelta(hours=expire_hours), user_token)
+    Database.users.setex(
+        "session:" + user_token, datetime.timedelta(hours=expire_hours), session
+    )
     yield KerasSubmissionRequest(
         user_id=user_id,
         user_token=user_token,
