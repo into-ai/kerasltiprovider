@@ -175,8 +175,7 @@ def get_or_create_user(
     )
     user_token = str(uuid.uuid4())
     if str(current_app.config.get("ENABLE_TOKEN_FROM_USER_ID")).lower() == "true":
-        test = "606baa09-d5a4-4f6c-b2ad-b0c1608b392a"
-        user_token = str(hashlib.md5(test.encode("utf-8")).hexdigest())
+        user_token = str(hashlib.md5(user_id.encode("utf-8")).hexdigest())
 
     span.set_tag("user_id", user_id)
     span.set_tag("assignment_id", assignment_id)
