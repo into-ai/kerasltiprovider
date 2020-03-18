@@ -136,10 +136,10 @@ def test_grade_calculation() -> None:
             mocked_time.return_value = datetime.datetime(
                 year=2001, month=1, day=1, hour=0, minute=3
             )
-            assert mock_assignment.validate(mock_predictions_correct) == 1.0
-            assert mock_assignment.validate(mock_predictions_okay) == 0.75
-            assert mock_assignment.validate(mock_predictions_bad) == 0.5
-            assert mock_assignment.validate(mock_predictions_very_bad) == 0
+            assert mock_assignment.validate(mock_predictions_correct) == (1.0, 1.0)
+            assert mock_assignment.validate(mock_predictions_okay) == (0.75, 0.75)
+            assert mock_assignment.validate(mock_predictions_bad) == (0.5, 0.5)
+            assert mock_assignment.validate(mock_predictions_very_bad) == (0, 0)
 
 
 def test_accuracy_interpolation() -> None:

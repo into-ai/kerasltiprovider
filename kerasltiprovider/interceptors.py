@@ -25,7 +25,7 @@ from kerasltiprovider.exceptions import (
 from kerasltiprovider.submission import KerasSubmissionRequest
 from kerasltiprovider.tracer import Tracer
 from kerasltiprovider.types import RequestResultType
-from kerasltiprovider.utils import MIME, MIMEType, interpolate_accuracy
+from kerasltiprovider.utils import MIME, MIMEType
 
 log = logging.getLogger("kerasltiprovider")
 log.addHandler(logging.NullHandler())
@@ -123,34 +123,7 @@ def restore_session(
                 )
                 for k, v in restored_session.items():
                     session[k] = v
-                accuracy = assignment.validate(predictions)
-
-                t_min, t_max = 0.0, 1.0
-                try:
-                    t_max = (
-                        float(
-                            current_app.config.get("GRADING_ACCURACY_MAX_THRESHOLD")
-                            or 100.0
-                        )
-                        / 100.0
-                    )
-                except Exception as e:
-                    print(e)
-                    pass
-                try:
-                    t_min = (
-                        float(
-                            current_app.config.get("GRADING_ACCURACY_MIN_THRESHOLD")
-                            or 0.0
-                        )
-                        / 100.0
-                    )
-                except Exception as e:
-                    print(e)
-                    pass
-                score = round(
-                    interpolate_accuracy(accuracy, min=t_min, max=t_max), ndigits=2
-                )
+                accuracy, score = assignment.validate(predictions)
 
                 scope.span.log_kv(
                     dict(

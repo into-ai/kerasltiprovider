@@ -61,13 +61,15 @@ class KerasAssignment:
         validation_data: ValidationData,
         input_selection_strategy: "SelectionStrategy",
         validation_set_size: int,
-        submission_deadline: datetime.datetime,
+        submission_deadline: typing.Optional[datetime.datetime] = None,
+        grading_callback: typing.Optional[typing.Callable[[float], float]] = None,
     ):
         self.name = name
         self.identifier = identifier
         self.validation_set_size = validation_set_size
         self.submission_deadline = submission_deadline
         self.input_selection_strategy = input_selection_strategy
+        self.grading_callback = grading_callback
 
         # The raw validation data (inputs and labels)
         self.validation_data = validation_data
@@ -86,7 +88,9 @@ class KerasAssignment:
             name=self.name,
             identifier=self.identifier,
             validation_set_size=self.validation_set_size,
-            submission_deadline=self.submission_deadline.isoformat(),
+            submission_deadline="None"
+            if not self.submission_deadline
+            else self.submission_deadline.isoformat(),
             input_selection_strategy=self.input_selection_strategy.__class__.__name__,
             validation_set_preview=self.validation_set.items()[:1],
             validation_hash_table_preview=list(self.validation_hash_table.items())[:1],
@@ -104,18 +108,20 @@ class KerasAssignment:
 
     def still_open(self, date: typing.Optional[Datetime] = None) -> bool:
         with Tracer.main().start_active_span("KerasAssignment.still_open") as scope:
+            if self.submission_deadline is None:
+                return True
             scope.span.set_tag("date", date)
             date = date or Datetime.now()
             diff = (self.submission_deadline - date).total_seconds()
             scope.span.log_kv(dict(diff_seconds=diff, still_open=diff >= 0))
             return diff >= 0
 
-    def validate(self, predictions: PredType) -> float:
+    def validate(self, predictions: PredType) -> typing.Tuple[float, float]:
         with Tracer.main().start_active_span("KerasAssignment.validate") as scope:
             scope.span.set_tag("predictions", predictions)
             if not self.still_open():
                 raise SubmissionAfterDeadlineException(
-                    f"The deadline for submission was on {self.submission_deadline.isoformat()}"
+                    f"The deadline for submission was on {'?' if not self.submission_deadline else self.submission_deadline.isoformat()}"
                 )
             if not len(predictions) == len(self.validation_set):
                 raise SubmissionValidationError(
@@ -132,8 +138,16 @@ class KerasAssignment:
                     if float(reference_prediction) == float(prediction):
                         num_correct += 1
 
-            scope.span.log_kv(dict(num_correct=num_correct))
-            return num_correct / len(self.validation_set)
+            accuracy = num_correct / len(self.validation_set)
+            score = (
+                accuracy
+                if not self.grading_callback
+                else self.grading_callback(accuracy)
+            )
+            scope.span.log_kv(
+                dict(num_correct=num_correct, score=score, accuracy=accuracy)
+            )
+            return accuracy, score
 
     def input_key_for(self, matrix_hash: str) -> str:
         return f"{self.identifier}:{matrix_hash}"

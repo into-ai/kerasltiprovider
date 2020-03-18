@@ -22,7 +22,7 @@ def assignment():
 
     return KerasAssignment(
         name="Exercise 2: Build your second network",
-        identifier=2,
+        identifier="2",
         # Data used for validation
         validation_data=ValidationData(test_images, test_labels),
         # Selection strategy used to choose `validation_set_size` items from the `validation_data`
