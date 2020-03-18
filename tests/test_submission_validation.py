@@ -13,7 +13,7 @@ from kerasltiprovider.exceptions import (
     SubmissionValidationError,
 )
 from kerasltiprovider.selection import RandomSelectionStrategy
-from kerasltiprovider.utils import Datetime, hash_matrix
+from kerasltiprovider.utils import Datetime, hash_matrix, interpolate_accuracy
 
 
 def to_matrix(x: typing.List[int], y: typing.List[int]) -> np.ndarray:
@@ -140,6 +140,33 @@ def test_grade_calculation() -> None:
             assert mock_assignment.validate(mock_predictions_okay) == 0.75
             assert mock_assignment.validate(mock_predictions_bad) == 0.5
             assert mock_assignment.validate(mock_predictions_very_bad) == 0
+
+
+def test_accuracy_interpolation() -> None:
+    assert interpolate_accuracy(acc=0.0, min=0.0, max=1.0) == 0.0
+    assert interpolate_accuracy(acc=1.0, min=0.0, max=1.0) == 1.0
+    assert interpolate_accuracy(acc=0.5, min=0.0, max=1.0) == 0.5
+
+    assert interpolate_accuracy(acc=0.5, min=0.25, max=0.75) == 0.5
+    assert interpolate_accuracy(acc=0.25, min=0.25, max=0.75) == 0.0
+    assert interpolate_accuracy(acc=0.2, min=0.25, max=0.75) == 0.0
+    assert interpolate_accuracy(acc=0.9, min=0.25, max=0.75) == 1.0
+    assert interpolate_accuracy(acc=0.75, min=0.25, max=0.75) == 1.0
+    assert interpolate_accuracy(acc=0.4, min=0.0, max=0.8) == 0.5
+    assert (
+        abs(
+            round(interpolate_accuracy(acc=0.7, min=0.0, max=0.8), ndigits=2)
+            - round(7.0 / 8.0, ndigits=2)
+        )
+        <= 0.02
+    )
+    assert (
+        abs(
+            round(interpolate_accuracy(acc=0.85, min=0.8, max=0.9), ndigits=2)
+            - round(0.5, ndigits=2)
+        )
+        <= 0.02
+    )
 
 
 def test_checks_deadline(mock_assignment1: KerasAssignment) -> None:

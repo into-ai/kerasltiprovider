@@ -20,6 +20,14 @@ def slash_join(*args: str) -> str:
     return reduce(urljoin, args).rstrip("/")
 
 
+def interpolate_accuracy(acc: float, min: float = 0.0, max: float = 1.0) -> float:
+    if min >= acc:
+        return 0
+    if max <= acc:
+        return 1.0
+    return (acc - min) / (max - min)
+
+
 class Datetime(datetime.datetime):
     """Use this for mocking"""
 

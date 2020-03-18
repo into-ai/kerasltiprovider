@@ -150,7 +150,7 @@ def start(lti: pylti.flask.LTI) -> RequestResultType:
 @on_error(handler=error_handler)
 @restore_session
 @lti(request="session", error=error_handler, app=current_app)
-def submit(grade: float, lti: pylti.flask.LTI) -> RequestResultType:
+def submit(grade: float, accuracy: float, lti: pylti.flask.LTI) -> RequestResultType:
     """ post grade
     :return: grade rendered by grade.html template
     """
@@ -170,8 +170,9 @@ def submit(grade: float, lti: pylti.flask.LTI) -> RequestResultType:
             return (
                 jsonify(
                     dict(
-                        grade=grade,
-                        message=f"{lti_request.user_id} was successfully graded for {lti_request.assignment_id}",
+                        grade_percent=grade,
+                        accuracy=accuracy,
+                        message=f"Successfully graded for {lti_request.assignment_id}",
                     )
                 ),
                 200,
