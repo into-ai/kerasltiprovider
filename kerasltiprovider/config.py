@@ -30,12 +30,12 @@ HOST = os.environ.get("HOST", "0.0.0.0")
 
 # Path to register the blueprint under
 # This does not make sense with env vars but when
-BLUEPRINT_PATH = "/"
+URL_PREFIX = os.environ.get("URL_PREFIX") or "/"
 
 # Where the service will be running at in production
 PUBLIC_PORT = os.environ.get("PUBLIC_PORT") or PORT
 PUBLIC_HOST = os.environ.get("PUBLIC_HOST") or HOST
-PUBLIC_PATH = os.environ.get("PUBLIC_PATH") or BLUEPRINT_PATH
+PUBLIC_PATH = os.environ.get("PUBLIC_PATH") or URL_PREFIX
 
 # Enable or disable production mode
 PRODUCTION = os.environ.get("PRODUCTION", "True")
