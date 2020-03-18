@@ -17,6 +17,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
+logging.getLogger("kerasltiprovider").setLevel(logging.DEBUG)
 
 
 def assignment():
@@ -37,7 +38,7 @@ def assignment():
         # Selection strategy used to choose `validation_set_size` items from the `validation_data`
         input_selection_strategy=RandomSelectionStrategy(seed=20),
         # Size of the validation set used for calculating the accuracy
-        validation_set_size=100,
+        validation_set_size=200,
         # Deadline for submission, later submission will not be accepted
         submission_deadline=datetime.datetime(
             year=2020, month=12, day=31, hour=23, minute=59

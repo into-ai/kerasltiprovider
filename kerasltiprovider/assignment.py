@@ -27,6 +27,9 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
+log = logging.getLogger("kerasltiprovider")
+log.addHandler(logging.NullHandler())
+
 
 ValHTType = typing.Dict[str, typing.Dict[str, str]]
 PredType = typing.Dict[str, int]
@@ -144,6 +147,7 @@ class KerasAssignment:
                 if not self.grading_callback
                 else self.grading_callback(accuracy)
             )
+            log.info(str(dict(num_correct=num_correct, score=score, accuracy=accuracy)))
             scope.span.log_kv(
                 dict(num_correct=num_correct, score=score, accuracy=accuracy)
             )
