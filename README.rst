@@ -41,6 +41,10 @@ See the `official documentation`_ for more information.
 Development
 -----------
 
+To get a development instance up and running quickly, run::
+
+    $ FLASK_SECRET_KEY=123 ASSIGNMENTS_PY_CONFIG=$(realpath ./examples/sample_assignments.py) ENABLE_DEBUG_LAUNCHER=True PRODUCTION=False CONSUMER_KEY_SECRET=123=test python serve.py
+
 For detailed instructions see `CONTRIBUTING <CONTRIBUTING.rst>`_.
 
 Tests

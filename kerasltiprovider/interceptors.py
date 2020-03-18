@@ -9,7 +9,9 @@ from contextlib import contextmanager
 
 import jaeger_client.span
 import pylti
-from flask import jsonify, request, session
+from flask import current_app, jsonify
+from flask import request as flask_request
+from flask import session
 from pylti.common import LTI_PROPERTY_LIST, LTI_SESSION_KEY
 
 from kerasltiprovider.assignment import find_assignment
@@ -103,7 +105,7 @@ def restore_session(
             scope.span.log_kv(kwargs)
             restored_session = dict()
             try:
-                data = request.get_json()
+                data = flask_request.get_json()
                 predictions = data["predictions"]
                 user_token = data["user_token"]
                 assignment_id = data["assignment_id"]
@@ -154,8 +156,16 @@ def get_or_create_user(
     _lti: pylti.flask.LTI, span: jaeger_client.span.Span
 ) -> typing.Iterator[KerasSubmissionRequest]:
     assert _lti.verify()
+
+    if flask_request.method == "POST":
+        params = flask_request.form.to_dict()
+    else:
+        params = flask_request.args.to_dict()
+
     user_id = _lti.user_id
-    resource_link_id = _lti.session.get("resource_link_id", None)
+    assignment_id = params.get(
+        current_app.config.get("LAUNCH_ASSIGNMENT_ID_PARAM") or "custom_x-assignment-id"
+    )
     session = json.dumps(
         {
             prop: _lti.session.get(prop, None)
@@ -165,7 +175,7 @@ def get_or_create_user(
     user_token = str(uuid.uuid4())
 
     span.set_tag("user_id", user_id)
-    span.set_tag("resource_link_id", resource_link_id)
+    span.set_tag("assignment_id", assignment_id)
     span.set_tag("user_token", user_token)
 
     span.log_kv(dict(session=session))
@@ -175,5 +185,8 @@ def get_or_create_user(
     Database.users.setex(user_id, datetime.timedelta(hours=48), user_token)
     Database.users.setex("session:" + user_token, datetime.timedelta(hours=48), session)
     yield KerasSubmissionRequest(
-        user=user_id, user_token=user_token, assignment_id=resource_link_id
+        user_id=user_id,
+        user_token=user_token,
+        assignment_id=assignment_id,
+        params=params,
     )

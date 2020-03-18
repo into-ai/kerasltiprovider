@@ -4,4 +4,4 @@ provider = klti.LTIProvider(
 		input_api_endpoint='{{ input_api_endpoint }}',
 		submission_api_endpoint='{{ submission_api_endpoint }}',
 		user_token='{{ user_token }}')
-provider.submit(klti.Submission(assignment_id={{ assignment_id }}, model=model))
+provider.submit(klti.Submission(assignment_id='{{ assignment_id }}', model=model))

@@ -26,7 +26,6 @@ def mock_redis_connection() -> typing.Iterator[
 ]:
     with unittest.mock.patch(
         "kerasltiprovider.database.Database.assignments",
-        # "kerasltiprovider.context.assignments",
         new_callable=unittest.mock.PropertyMock,
     ) as mocked_assignments_db:
         with unittest.mock.patch(
@@ -49,7 +48,7 @@ def mock_assignment1() -> KerasAssignment:
         mocked_model.return_value = unittest.mock.MagicMock
         return KerasAssignment(
             name="Mock Exercise 1",
-            identifier=12,
+            identifier="12",
             validation_data=ValidationData(validation_data, validation_label),
             validation_set_size=len(validation_data),
             input_selection_strategy=RandomSelectionStrategy(seed=20),
@@ -120,7 +119,7 @@ def test_grade_calculation() -> None:
 
         mock_assignment = KerasAssignment(
             name="Mock Exercise 1",
-            identifier=0,
+            identifier="0",
             validation_data=validation_data,
             validation_set_size=len(hashed_mock_input_matrices.values()),
             input_selection_strategy=RandomSelectionStrategy(seed=20),

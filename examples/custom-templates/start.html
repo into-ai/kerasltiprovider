@@ -126,7 +126,7 @@ mark {
 		{% if logo_uri is not none %}
 				<img class="mb-4" src="{{ logo_uri }}" alt="" height="72">
 		{%endif %}
-		<h1 class="h3 mb-3 font-weight-normal">Welcome {{ username }}</h1>
+		<h1 class="h3 mb-3 font-weight-normal">Welcome {{ lti_request.params.get("lis_person_name_full") }}</h1>
 	</div>
 
 	<div>

@@ -118,8 +118,9 @@ def start(lti: pylti.flask.LTI) -> RequestResultType:
                 )
             submission_api_endpoint = slash_join(str(public_url), str(submission_url))
             template_options = dict(
+                lti_request=lti_request,
+                user_id=lti_request.user_id,
                 user_token=lti_request.user_token,
-                username=lti_request.user,
                 assignment_name=assignment.name,
                 assignment_id=assignment.identifier,
                 provider_name=current_app.config.get("PROVIDER_NAME"),
@@ -163,14 +164,14 @@ def submit(grade: float, lti: pylti.flask.LTI) -> RequestResultType:
             except Exception as e:
                 raise PostingGradeFailedException(
                     str(e),
-                    user_id=lti_request.user,
+                    user_id=lti_request.user_id,
                     assignment_id=lti_request.assignment_id,
                 )
             return (
                 jsonify(
                     dict(
                         grade=grade,
-                        message=f"{lti_request.user} was successfully graded for {lti_request.assignment_id}",
+                        message=f"{lti_request.user_id} was successfully graded for {lti_request.assignment_id}",
                     )
                 ),
                 200,
@@ -199,20 +200,20 @@ def launch() -> RequestResultType:
             consumer_key=current_app.config.get("CONSUMER_KEY"),
             consumer_secret=current_app.config.get("CONSUMER_KEY_SECRET"),
             launch_url=slash_join(str(public_url), str(url)),
-            params=dict(
-                lti_message_type="basic-lti-launch-request",
-                lti_version="lti_version",
-                context_id="Open HPI",
-                user_id="roman",
-                roles=["student"],
-                # Optional
-                context_title="Open HPI Mooc Neural Networks 2019",
-                context_label="Open HPI NN 2019",
-                # custom_assignment_name="Exercise 1: Build your first network",
-                custom_assignment_code=2,
-                resource_link_id=2,
-                lis_outcome_service_url="http://localhost:8080/savegrade",
-            ),
+            params={
+                "lti_message_type": "basic-lti-launch-request",
+                "lti_version": "lti_version",
+                "resource_link_id": 2,
+                "context_id": "Open HPI",
+                "user_id": "max",
+                "roles": ["student"],
+                "context_title": "Open HPI Mooc Neural Networks 2019",
+                "context_label": "Open HPI NN 2019",
+                # Custom args MUST start with custom_
+                "custom_x-assignment-id": 2,
+                "lis_person_name_full": "Max Mustermann",
+                "lis_outcome_service_url": "http://localhost:8080/savegrade",
+            },
         )
         return (
             render_template(

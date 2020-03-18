@@ -40,9 +40,6 @@ PUBLIC_PATH = os.environ.get("PUBLIC_PATH") or BLUEPRINT_PATH
 # Enable or disable production mode
 PRODUCTION = os.environ.get("PRODUCTION", "True")
 
-# Set the log level
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
-
 # ENABLE_ABSOLUTE_INPUT_ENDPOINT_URL
 ENABLE_ABSOLUTE_INPUT_ENDPOINT_URL = os.environ.get(
     "ENABLE_ABSOLUTE_INPUT_ENDPOINT_URL", "False"
@@ -59,6 +56,11 @@ TEMPLATE_PREFIX = os.environ.get("TEMPLATE_PREFIX", "")
 #
 # LTI Related
 #
+
+# Custom argument storing the assignment ID
+LAUNCH_ASSIGNMENT_ID_PARAM = os.environ.get(
+    "LAUNCH_ASSIGNMENT_ID_PARAM", "custom_x-assignment-id"
+)
 
 # Flask secret key for secure session management
 SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
@@ -110,8 +112,11 @@ PYLTI_CONFIG = dict(
 # Debug related
 #
 
+# Set the log level
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
 # Whether the input data database should not be reset upon restarts
-KEEP_DATABASE = os.environ.get("KEEP_DATABASE", "False")
+KEEP_ASSIGNMENTS_DATABASE = os.environ.get("KEEP_ASSIGNMENTS_DATABASE", "False")
 
 # Whether a debug LTI consumer should provide a launch at /launch
 ENABLE_DEBUG_LAUNCHER = os.environ.get("ENABLE_DEBUG_LAUNCHER", "False")

@@ -38,7 +38,7 @@ class KerasLTIProvider:
         self.connect_redis()
 
         # Insert assignment inputs into redis database
-        if not self.app.config.get("KEEP_DATABASE"):
+        if not str(self.app.config.get("KEEP_ASSIGNMENTS_DATABASE")).lower() == "true":
             self.app.logger.info("Flushing assignments")
             if Database.assignments:
                 Database.assignments.flushdb()
