@@ -186,6 +186,10 @@
 </div>
 <div class="section" id="development">
 <h2>Development<a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h2>
+<p>To get a development instance up and running quickly, run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ FLASK_SECRET_KEY=123 ASSIGNMENTS_PY_CONFIG=$(realpath ./examples/sample_assignments.py) ENABLE_DEBUG_LAUNCHER=True PRODUCTION=False CONSUMER_KEY_SECRET=123=test python serve.py
+</pre></div>
+</div>
 <p>For detailed instructions see <a class="reference external" href="CONTRIBUTING.rst">CONTRIBUTING</a>.</p>
 <div class="section" id="tests">
 <h3>Tests<a class="headerlink" href="#tests" title="Permalink to this headline">¶</a></h3>
