@@ -77,6 +77,9 @@ PROVIDER_NAME = os.environ.get("PROVIDER_NAME", "KerasLTIProvider")
 PROVIDER_LOGO_URI = os.environ.get("PROVIDER_LOGO_URI")
 
 # Name of the accepted tool consumer
+CONSUMER_NAME = os.environ.get("CONSUMER_NAME")
+
+# Name of the accepted tool consumer
 CONSUMER_KEY = os.environ.get("CONSUMER_KEY", "consumer")
 
 # PEM file containing the consumers secret key

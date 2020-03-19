@@ -1,6 +1,5 @@
 import datetime
 import functools
-import hashlib
 import json
 import logging
 import traceback
@@ -10,7 +9,7 @@ from contextlib import contextmanager
 
 import jaeger_client.span
 import pylti
-from flask import current_app, jsonify
+from flask import current_app, jsonify, render_template
 from flask import request as flask_request
 from flask import session
 from pylti.common import LTI_PROPERTY_LIST, LTI_SESSION_KEY
@@ -19,13 +18,15 @@ from kerasltiprovider.assignment import find_assignment
 from kerasltiprovider.database import Database
 from kerasltiprovider.exceptions import (
     KerasLTIProviderException,
+    MissingAssignmentIDException,
     NoDatabaseException,
+    UnknownAssignmentException,
     UnknownUserTokenException,
 )
 from kerasltiprovider.submission import KerasSubmissionRequest
 from kerasltiprovider.tracer import Tracer
 from kerasltiprovider.types import RequestResultType
-from kerasltiprovider.utils import MIME, MIMEType
+from kerasltiprovider.utils import MIME, MIMEType, get_session_id, hash_user_id
 
 log = logging.getLogger("kerasltiprovider")
 log.addHandler(logging.NullHandler())
@@ -34,11 +35,27 @@ ErrType = typing.Dict[str, typing.Any]
 ErrResultType = typing.Tuple[str, int, MIMEType]
 
 
+def start_error_handler(
+    exception: typing.Optional[ErrType] = None,
+) -> RequestResultType:
+    _exception = exception or dict()
+    exc = _exception.get("exception", Exception)
+    status_code = getattr(exc, "status", 500)
+    log.warning(str(exc))
+    return (
+        render_template(
+            current_app.config.get("TEMPLATE_PREFIX", "") + "error.html",
+            error=str(exc),
+            now=datetime.datetime.utcnow(),
+            provider_name=current_app.config.get("PROVIDER_NAME"),
+            consumer_name=current_app.config.get("CONSUMER_NAME"),
+        ),
+        status_code,
+        MIME.html,
+    )
+
+
 def error_handler(exception: typing.Optional[ErrType] = None) -> RequestResultType:
-    """ render error page
-    :param exception: optional exception
-    :return: the error.html template rendered
-    """
     with Tracer.main().start_active_span("error_handler") as scope:
         _exception = exception or dict()
         exc = _exception.get("exception", Exception)
@@ -47,32 +64,20 @@ def error_handler(exception: typing.Optional[ErrType] = None) -> RequestResultTy
         user_id = None
 
         scope.span.log_kv(dict(exception=_exception, exc=exc, status_code=status_code,))
-
-        # More detailed error messages for LTI issues
-        if isinstance(exc, pylti.common.LTINotInSessionException):
-            log.info("Ignoring request from user with invalid session")
-            message = "LTI invalid session"
-        elif isinstance(exc, pylti.common.LTIException):
-            log.warning("LTI error")
-            message = str(exc)
+        log.error(str(exc))
 
         # We can pass our custom error messages
-        elif isinstance(exc, KerasLTIProviderException):
-            log.error(exc)
+        if isinstance(exc, KerasLTIProviderException):
             user_id = exc.user_id
             message = str(exc)
-
-        # Use default error message on unknown errors
-        else:
-            log.error(exc)
 
         scope.span.log_kv(dict(message=message))
 
         response = dict(error=message, success=False)
         if user_id is not None:
-            response["user_id"] = user_id
+            response.update(user_id=user_id)
 
-        print("Returning %s" % response)
+        log.info(response)
         return jsonify(response), status_code, MIME.json
 
 
@@ -98,32 +103,46 @@ def restore_session(
     func: typing.Callable[..., typing.Any]
 ) -> typing.Callable[..., typing.Any]:
     with Tracer.main().start_active_span("restore_session") as scope:
-        scope.span.set_tag("func", func)
 
         @functools.wraps(func)
         def decorator(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
             scope.span.log_kv(kwargs)
-            restored_session = dict()
+
+            user_id = None
+            assignment_id = None
             try:
                 data = flask_request.get_json()
                 predictions = data["predictions"]
                 user_token = data["user_token"]
                 assignment_id = data["assignment_id"]
+                submission = dict(
+                    num_predictions=len(predictions),
+                    user_token=user_token,
+                    assignment_id=assignment_id,
+                )
+                log.debug(f"Restoring session for submission [{str(submission)}]")
+
                 assignment = find_assignment(assignment_id)
+                if not assignment:
+                    raise UnknownAssignmentException(
+                        f"No assignment with id {assignment_id}"
+                    )
 
                 if not Database.users:
                     raise NoDatabaseException
-                user = Database.users.get("session:" + user_token)
+
+                user = Database.users.get(get_session_id(assignment_id, user_token))
+
                 if not user:
                     raise UnknownUserTokenException(
-                        f"The token {user_token} is not a valid token. Relaunch to obtain a valid token!"
+                        f"The token {user_token} is not valid or has expired. Try again with a new token!"
                     )
-                restored_session = json.loads(
-                    Database.users.get("session:" + user_token)
-                )
+
+                restored_session = json.loads(user)
                 for k, v in restored_session.items():
                     session[k] = v
                 accuracy, score = assignment.validate(predictions)
+                log.debug(f"accuracy={accuracy}, score={score}")
 
                 scope.span.log_kv(
                     dict(
@@ -138,11 +157,18 @@ def restore_session(
                     )
                 )
 
-                return func(grade=score, accuracy=accuracy, *args, **kwargs)
+                return func(
+                    grade=score,
+                    accuracy=accuracy,
+                    user_token=user_token,
+                    assignment_id=assignment_id,
+                    *args,
+                    **kwargs,
+                )
 
             except KerasLTIProviderException as e:
-                e.user_id = restored_session.get("user_id")
-                e.assignment_id = restored_session.get("assignment_id")
+                e.user_id = user_id
+                e.assignment_id = assignment_id
                 raise e
 
             except Exception:
@@ -163,32 +189,54 @@ def get_or_create_user(
     else:
         params = flask_request.args.to_dict()
 
-    user_id = _lti.user_id
-    assignment_id = params.get(
+    assignment_id_key = (
         current_app.config.get("LAUNCH_ASSIGNMENT_ID_PARAM") or "custom_x-assignment-id"
     )
+
+    # Query the current session
     session = json.dumps(
         {
             prop: _lti.session.get(prop, None)
             for prop in LTI_PROPERTY_LIST + [LTI_SESSION_KEY]
         }
     )
+
+    user_id = _lti.user_id
+    assignment_id = params.get(assignment_id_key)
+
+    if not assignment_id:
+        raise MissingAssignmentIDException(
+            f"Missing assignment id (expected at key {assignment_id_key})"
+        )
+
     user_token = str(uuid.uuid4())
     if str(current_app.config.get("ENABLE_TOKEN_FROM_USER_ID")).lower() == "true":
-        user_token = str(hashlib.md5(user_id.encode("utf-8")).hexdigest())
+        user_token = hash_user_id(user_id)
 
     span.set_tag("user_id", user_id)
     span.set_tag("assignment_id", assignment_id)
     span.set_tag("user_token", user_token)
 
-    span.log_kv(dict(session=session))
+    span.log_kv(
+        dict(user_id=user_id, assignment_id=assignment_id, user_token=user_token)
+    )
 
     if not Database.users:
         raise NoDatabaseException
-    expire_hours = int(current_app.config.get("USER_TOKEN_EXPIRE_HOURS") or 48)
-    Database.users.setex(user_id, datetime.timedelta(hours=expire_hours), user_token)
+    try:
+        expire_hours = int(current_app.config.get("USER_TOKEN_EXPIRE_HOURS") or 4)
+    except ValueError:
+        log.warning(
+            f"{current_app.config.get('USER_TOKEN_EXPIRE_HOURS')} is not a valid expiration time"
+        )
+        expire_hours = 4
+    log.debug(
+        f"Saving {get_session_id(assignment_id, user_token)} (expires in {expire_hours} hours)"
+    )
     Database.users.setex(
-        "session:" + user_token, datetime.timedelta(hours=expire_hours), session
+        get_session_id(assignment_id, user_token),
+        datetime.timedelta(hours=expire_hours),
+        session,
     )
     yield KerasSubmissionRequest(
         user_id=user_id,

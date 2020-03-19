@@ -20,6 +20,7 @@ from kerasltiprovider.interceptors import (
     get_or_create_user,
     on_error,
     restore_session,
+    start_error_handler,
 )
 from kerasltiprovider.tracer import Tracer
 from kerasltiprovider.types import AnyIDType, RequestResultType
@@ -84,8 +85,8 @@ def inputs(assignment_id: AnyIDType) -> RequestResultType:
 
 
 @mod.route("/start", methods=["POST", "GET"])
-@lti(error=error_handler, request="initial", app=current_app)
-@on_error(handler=error_handler)
+@lti(error=start_error_handler, request="initial", app=current_app)
+@on_error(handler=start_error_handler)
 def start(lti: pylti.flask.LTI) -> RequestResultType:
     """
     access route with 'initial' request only, subsequent requests are not allowed.
@@ -123,11 +124,11 @@ def start(lti: pylti.flask.LTI) -> RequestResultType:
                 user_token=lti_request.user_token,
                 assignment_name=assignment.name,
                 assignment_id=assignment.identifier,
-                provider_name=current_app.config.get("PROVIDER_NAME"),
                 logo_uri=current_app.config.get("PROVIDER_LOGO_URI"),
                 input_api_endpoint=input_api_endpoint,
                 submission_api_endpoint=submission_api_endpoint,
                 now=datetime.datetime.utcnow(),
+                provider_name=current_app.config.get("PROVIDER_NAME"),
             )
 
             code = render_template(
@@ -150,34 +151,48 @@ def start(lti: pylti.flask.LTI) -> RequestResultType:
 @on_error(handler=error_handler)
 @restore_session
 @lti(request="session", error=error_handler, app=current_app)
-def submit(grade: float, accuracy: float, lti: pylti.flask.LTI) -> RequestResultType:
+def submit(
+    grade: float,
+    accuracy: float,
+    user_token: str,
+    assignment_id: str,
+    lti: pylti.flask.LTI,
+) -> RequestResultType:
     """ post grade
     :return: grade rendered by grade.html template
     """
     with Tracer.main().start_span("grading_submission") as span:
-        with get_or_create_user(lti, span) as lti_request:
-            span.set_tag("grade_percent", grade)
-            log.info(f"Grading {grade}")
-            span.log_kv(dict(lti_request=lti_request.formatted))
-            try:
-                lti.post_grade(grade)
-            except Exception as e:
-                raise PostingGradeFailedException(
-                    str(e),
-                    user_id=lti_request.user_id,
-                    assignment_id=lti_request.assignment_id,
-                )
-            return (
-                jsonify(
-                    dict(
-                        grade_percent=grade,
-                        accuracy=accuracy,
-                        message=f"Successfully graded for {lti_request.assignment_id}",
-                    )
-                ),
-                200,
-                MIME.json,
+        span.set_tag("grade_percent", grade)
+        log.info(f"Grading {grade} for {lti.user_id}")
+        span.log_kv(
+            dict(
+                grade=grade,
+                accuracy=accuracy,
+                user_token=user_token,
+                user_id=lti.user_id,
+                assignment_id=assignment_id,
             )
+        )
+        try:
+            lti.post_grade(grade)
+        except Exception as e:
+            log.error(e)
+            raise PostingGradeFailedException(
+                "Failed to submit the grade to the LTI Consumer",
+                user_id=lti.user_id,
+                assignment_id=assignment_id,
+            )
+        return (
+            jsonify(
+                dict(
+                    grade_percent=grade,
+                    accuracy=accuracy,
+                    message=f"Successfully graded for {assignment_id}: Received {grade*100}% (acc={accuracy})",
+                )
+            ),
+            200,
+            MIME.json,
+        )
 
 
 @mod.route("/")
@@ -197,24 +212,28 @@ def launch() -> RequestResultType:
             raise ConfigurationErrorException(
                 f"Cannot create launch URL from PUBLIC_URL={public_url} and PATH={url}"
             )
+        params = dict(
+            lti_message_type="basic-lti-launch-request",
+            lti_version="lti_version",
+            resource_link_id=2,
+            context_id="Open HPI",
+            user_id="max",
+            roles=["student"],
+            context_title="Open HPI Mooc Neural Networks 2019",
+            context_label="Open HPI NN 2019",
+            lis_person_name_full="Max Mustermann",
+            lis_outcome_service_url="http://localhost:8080/savegrade",
+        )
+        # Custom args MUST start with custom_
+        params[
+            current_app.config.get("LAUNCH_ASSIGNMENT_ID_PARAM")
+            or "custom_x-assignment-id"
+        ] = 2
         consumer = ToolConsumer(
             consumer_key=current_app.config.get("CONSUMER_KEY"),
             consumer_secret=current_app.config.get("CONSUMER_KEY_SECRET"),
             launch_url=slash_join(str(public_url), str(url)),
-            params={
-                "lti_message_type": "basic-lti-launch-request",
-                "lti_version": "lti_version",
-                "resource_link_id": 2,
-                "context_id": "Open HPI",
-                "user_id": "max",
-                "roles": ["student"],
-                "context_title": "Open HPI Mooc Neural Networks 2019",
-                "context_label": "Open HPI NN 2019",
-                # Custom args MUST start with custom_
-                "custom_x-assignment-id": 2,
-                "lis_person_name_full": "Max Mustermann",
-                "lis_outcome_service_url": "http://localhost:8080/savegrade",
-            },
+            params=params,
         )
         return (
             render_template(

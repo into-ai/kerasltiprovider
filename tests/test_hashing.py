@@ -1,7 +1,10 @@
+import uuid
+
 import numpy as np
+import pytest
 from tensorflow import keras
 
-from kerasltiprovider.utils import hash_matrix
+from kerasltiprovider.utils import hash_matrix, hash_user_id
 
 m1_float = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], np.float32)
 m1_0 = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], np.int32)
@@ -1700,6 +1703,19 @@ m5 = np.array(
     ],
     np.int32,
 )
+
+
+def test_user_id_hashes() -> None:
+    sample_user_id = str(uuid.uuid4())
+    assert hash_user_id(sample_user_id) == hash_user_id(sample_user_id)
+    n = 1000
+    for _ in range(1000):
+        a, b = str(uuid.uuid4()), str(uuid.uuid4())
+        if a != b and hash_user_id(a) != hash_user_id(b):
+            return
+    pytest.fail(
+        f"Could not find different hashes for different inputs within {n} attempts"
+    )
 
 
 def test_hash_is_injective() -> None:

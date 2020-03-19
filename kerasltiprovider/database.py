@@ -6,9 +6,7 @@ import redis
 class Database:
 
     assignments: typing.Optional[redis.Redis] = None
-    # assignments: redis.Redis # = None
     users: typing.Optional[redis.Redis] = None
-    # users: redis.Redis # = None
 
     def __init__(self, redis_host: str = "localhost", redis_port: int = 6379) -> None:
         self.redis_host = redis_host

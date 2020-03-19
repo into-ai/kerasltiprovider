@@ -34,6 +34,10 @@ class UnknownUserTokenException(KerasLTIProviderException):
     pass
 
 
+class MissingAssignmentIDException(KerasLTIProviderException):
+    pass
+
+
 class SubmissionAfterDeadlineException(InvalidGradingSubmissionException):
     pass
 
@@ -43,6 +47,10 @@ class AssignmentException(KerasLTIProviderException):
 
 
 class UnknownAssignmentException(AssignmentException):
+    pass
+
+
+class UnknownDatasetException(AssignmentException):
     pass
 
 

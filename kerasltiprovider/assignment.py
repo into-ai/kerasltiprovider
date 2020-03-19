@@ -15,6 +15,7 @@ from kerasltiprovider.exceptions import (
     SubmissionAfterDeadlineException,
     SubmissionValidationError,
     UnknownAssignmentException,
+    UnknownDatasetException,
 )
 from kerasltiprovider.tracer import Tracer
 from kerasltiprovider.types import AnyIDType
@@ -137,7 +138,13 @@ class KerasAssignment:
                 reference_prediction = Database.assignments.hget(
                     self.input_key_for(matrix_hash), "predicted"
                 )
-                if None not in [reference_prediction, prediction]:
+                if reference_prediction is None:
+                    raise UnknownDatasetException(
+                        "Cannot validate your results. Is this the correct assignment?"
+                    )
+                elif prediction is None:
+                    pass
+                else:
                     if float(reference_prediction) == float(prediction):
                         num_correct += 1
 
@@ -147,7 +154,6 @@ class KerasAssignment:
                 if not self.grading_callback
                 else self.grading_callback(accuracy)
             )
-            log.info(str(dict(num_correct=num_correct, score=score, accuracy=accuracy)))
             scope.span.log_kv(
                 dict(num_correct=num_correct, score=score, accuracy=accuracy)
             )
