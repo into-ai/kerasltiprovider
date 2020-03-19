@@ -174,7 +174,9 @@ def submit(
             )
         )
         try:
-            log.info(f"Submitting grade {grade} for user {lti.user_id} assignment {assignment_id} to {lti.response_url}")
+            log.info(
+                f"Submitting grade {grade} for user {lti.user_id} assignment {assignment_id} to {lti.response_url}"
+            )
             lti.post_grade(grade)
         except Exception as e:
             log.error(e)
