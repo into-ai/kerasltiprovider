@@ -163,7 +163,6 @@ def submit(
     """
     with Tracer.main().start_span("grading_submission") as span:
         span.set_tag("grade_percent", grade)
-        log.info(f"Grading {grade} for {lti.user_id}")
         span.log_kv(
             dict(
                 grade=grade,
@@ -173,6 +172,15 @@ def submit(
                 assignment_id=assignment_id,
             )
         )
+
+        from pylti.common import LTI_PROPERTY_LIST, LTI_SESSION_KEY
+
+        ltisession = {
+            prop: lti.session.get(prop, None)
+            for prop in LTI_PROPERTY_LIST + [LTI_SESSION_KEY]
+        }
+        log.debug(f"Session: {ltisession}")
+
         try:
             log.info(
                 f"Submitting grade {grade} for user {lti.user_id} assignment {assignment_id} to {lti.response_url}"
@@ -227,6 +235,7 @@ def launch() -> RequestResultType:
             lis_person_name_full="Max Mustermann",
             lis_outcome_service_url="http://localhost:8080/savegrade",
         )
+
         # Custom args MUST start with custom_
         params[
             current_app.config.get("LAUNCH_ASSIGNMENT_ID_PARAM")
