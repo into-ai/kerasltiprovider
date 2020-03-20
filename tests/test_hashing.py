@@ -1708,6 +1708,12 @@ m5 = np.array(
 def test_user_id_hashes() -> None:
     sample_user_id = str(uuid.uuid4())
     assert hash_user_id(sample_user_id) == hash_user_id(sample_user_id)
+    assert hash_user_id(sample_user_id, assignment_id=1) == hash_user_id(
+        sample_user_id, assignment_id=1
+    )
+    assert hash_user_id(sample_user_id, assignment_id=2) != hash_user_id(
+        sample_user_id, assignment_id=1
+    )
     n = 1000
     for _ in range(1000):
         a, b = str(uuid.uuid4()), str(uuid.uuid4())

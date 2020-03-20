@@ -14,8 +14,8 @@ class Database:
 
     def connect(self) -> None:
         self.__class__.users = redis.Redis(
-            host=self.redis_host, port=self.redis_port, db=0
+            host=self.redis_host, port=self.redis_port, db=0, decode_responses=True
         )
         self.__class__.assignments = redis.Redis(
-            host=self.redis_host, port=self.redis_port, db=1
+            host=self.redis_host, port=self.redis_port, db=1, decode_responses=True
         )

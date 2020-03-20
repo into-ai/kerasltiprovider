@@ -196,7 +196,7 @@ def submit(
         return (
             jsonify(
                 dict(
-                    grade_percent=grade,
+                    grade=grade,
                     accuracy=accuracy,
                     message=f"Successfully graded for {assignment_id}: Received {grade*100}% (acc={accuracy})",
                 )

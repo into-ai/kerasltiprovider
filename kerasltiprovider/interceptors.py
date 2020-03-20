@@ -211,7 +211,7 @@ def get_or_create_user(
 
     user_token = str(uuid.uuid4())
     if str(current_app.config.get("ENABLE_TOKEN_FROM_USER_ID")).lower() == "true":
-        user_token = hash_user_id(user_id)
+        user_token = hash_user_id(user_id, assignment_id=assignment_id)
 
     span.set_tag("user_id", user_id)
     span.set_tag("assignment_id", assignment_id)

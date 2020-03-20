@@ -16,18 +16,24 @@ def hash_matrix(m: np.ndarray) -> str:
     return hashlib.sha256(m.data.tobytes()).hexdigest()
 
 
-def hash_user_id(user_id: str) -> str:
+def hash_user_id(
+    user_id: str, assignment_id: typing.Optional[typing.Union[int, str]] = None
+) -> str:
     uid = user_id
     if isinstance(user_id, bytes):
         uid = user_id.decode("utf-8")
-    return str(hashlib.md5(uid.encode("utf-8")).hexdigest())
+    hash_key = "" if not assignment_id else str(assignment_id)
+    hash_key += f":{uid}"
+    return str(hashlib.md5(hash_key.encode("utf-8")).hexdigest())
 
 
 def slash_join(*args: str) -> str:
     return reduce(urljoin, args).rstrip("/")
 
 
-def get_session_id(assignment_id: typing.Any, user_token: typing.Any) -> str:
+def get_session_id(
+    assignment_id: typing.Union[int, str], user_token: typing.Union[int, str]
+) -> str:
     return f"session:{assignment_id}:{user_token}"
 
 

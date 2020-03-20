@@ -148,11 +148,12 @@ class KerasAssignment:
                     if float(reference_prediction) == float(prediction):
                         num_correct += 1
 
-            accuracy = num_correct / len(self.validation_set)
-            score = (
+            accuracy = round(num_correct / len(self.validation_set), ndigits=2)
+            score = round(
                 accuracy
                 if not self.grading_callback
-                else self.grading_callback(accuracy)
+                else self.grading_callback(accuracy),
+                ndigits=2,
             )
             scope.span.log_kv(
                 dict(num_correct=num_correct, score=score, accuracy=accuracy)
