@@ -99,6 +99,59 @@ def inputs(assignment_id: AnyIDType) -> RequestResultType:
         return jsonify(dict(predict=inputs)), 200, MIME.json
 
 
+@mod.route("/assignment/<assignment_id>/inputs/<input_id>", methods=["POST", "GET"])
+@on_error(handler=error_handler)
+def inputs_single(assignment_id: AnyIDType, input_id: int) -> RequestResultType:
+    """
+    access route with 'initial' request only, subsequent requests are not allowed.
+
+    :param: lti: `lti` object
+    :return: string "Initial request"
+    """
+    with Tracer.main().start_span("assignment_inputs") as span:
+        span.set_tag("assignment_id", assignment_id)
+
+        try:
+            assignment = find_assignment(assignment_id)
+        except (TypeError, ValueError, IndexError):
+            log.warning(
+                f"Ingoring request of validation inputs for unknown assignment: {assignment_id}"
+            )
+            raise UnknownAssignmentException(
+                "Unknown assignment", assignment_id=assignment_id, status=404
+            )
+
+        span.log_kv(dict(assignment=assignment.formatted))
+
+        try:
+            input_id = int(input_id)
+        except ValueError:
+            return (
+                jsonify(dict(error="Input_id needs to be an integer", success=False)),
+                404,
+                MIME.json,
+            )
+
+        if input_id >= len(assignment.validation_hash_table.items()):
+            return (
+                jsonify(dict(error="You exceeded the number of Inputs", success=False)),
+                404,
+                MIME.json,
+            )
+
+        inputs = []
+        mhash, req = list(assignment.validation_hash_table.items())[input_id]
+        matrix = req.get("matrix", np.array([]))
+        if not isinstance(matrix, np.ndarray):
+            raise InvalidValidationHashTableException(
+                "Validation hash table contains key without prediction",
+                assignment_id=assignment_id,
+            )
+        inputs.append(dict(matrix=matrix.tolist(), hash=mhash))
+        span.log_kv(dict(predict=inputs))
+        return jsonify(dict(predict=inputs)), 200, MIME.json
+
+
 @mod.route("/start", methods=["POST", "GET"])
 @lti(error=start_error_handler, request="initial", app=current_app)
 @on_error(handler=start_error_handler)
