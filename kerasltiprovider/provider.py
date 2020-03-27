@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import pylti
+import tensorflow as tf
 from flask import Blueprint, current_app, jsonify, render_template, url_for
 from lti import ToolConsumer
 from pylti.flask import lti
@@ -88,7 +89,8 @@ def inputs(assignment_id: AnyIDType) -> RequestResultType:
 
         inputs = []
         for mhash, req in assignment.validation_hash_table.items():
-            matrix = req.get("matrix", np.array([]))
+            _matrix: tf.Tensor = req["matrix"]
+            matrix = _matrix.numpy()
             if not isinstance(matrix, np.ndarray):
                 raise InvalidValidationHashTableException(
                     "Validation hash table contains key without prediction",
@@ -141,7 +143,8 @@ def inputs_single(assignment_id: AnyIDType, input_id: int) -> RequestResultType:
 
         inputs = []
         mhash, req = list(assignment.validation_hash_table.items())[input_id]
-        matrix = req.get("matrix", np.array([]))
+        _matrix: tf.Tensor = req["matrix"]
+        matrix = _matrix.numpy()
         if not isinstance(matrix, np.ndarray):
             raise InvalidValidationHashTableException(
                 "Validation hash table contains key without prediction",

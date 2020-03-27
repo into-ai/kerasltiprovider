@@ -123,7 +123,6 @@ class KerasAssignment:
             if not self.submission_deadline
             else self.submission_deadline.isoformat(),
             input_selection_strategy=self.input_selection_strategy.__class__.__name__,
-            validation_set_preview=self.validation_set.items()[:1],
             validation_hash_table_preview=list(self.validation_hash_table.items())[:1],
         )
 
