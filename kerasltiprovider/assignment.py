@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_datasets as tfds
 
 from kerasltiprovider import context
 from kerasltiprovider.database import Database
@@ -23,6 +24,7 @@ from kerasltiprovider.utils import Datetime, hash_matrix
 
 if TYPE_CHECKING:  # pragma: no cover
     from kerasltiprovider.selection import SelectionStrategy  # noqa: F401
+    from kerasltiprovider.processing import PostprocessingStep  # noqa: F401
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -42,6 +44,19 @@ class ValidationData:
         assert matrices.shape[0] == labels.shape[0]
         self.matrices = matrices
         self.labels = labels
+
+    @classmethod
+    def from_tf_dataset(
+        cls: typing.Type[VDC],
+        ds: tf.data.Dataset,
+        resize: typing.Optional[typing.Tuple[int, ...]] = None,
+    ) -> VDC:
+        if resize is not None:
+            ds = ds.map(lambda i, l: (tf.image.resize(i, resize), l))
+        np_ds = list(tfds.as_numpy(ds))
+        matrices = np.array([image for image, _ in np_ds])
+        labels = np.array([label for _, label in np_ds])
+        return cls(matrices, labels)
 
     @classmethod
     def from_model(cls: typing.Type[VDC], model_file: str, matrices: np.ndarray) -> VDC:
@@ -65,6 +80,10 @@ class KerasAssignment:
         validation_data: ValidationData,
         input_selection_strategy: "SelectionStrategy",
         validation_set_size: int,
+        partial_loading: typing.Optional[bool] = False,
+        input_postprocessing_steps: typing.Optional[
+            typing.List["PostprocessingStep"]
+        ] = None,
         submission_deadline: typing.Optional[datetime.datetime] = None,
         grading_callback: typing.Optional[typing.Callable[[float], float]] = None,
     ):
@@ -72,6 +91,7 @@ class KerasAssignment:
         self.identifier = identifier
         self.validation_set_size = validation_set_size
         self.submission_deadline = submission_deadline
+        self.partial_loading = partial_loading
         self.input_selection_strategy = input_selection_strategy
         self.grading_callback = grading_callback
 
@@ -82,6 +102,9 @@ class KerasAssignment:
         self.validation_set = self.input_selection_strategy.select(
             self.validation_set_size, self.validation_data
         )
+
+        for postprocessing_step in input_postprocessing_steps or list():
+            self.validation_set = postprocessing_step.process(self.validation_set)
 
         # Hashed validation set (will only be calculated once on demand)
         self._validation_hash_table: ValHTType = dict()

@@ -42,7 +42,13 @@ def assignments() -> RequestResultType:
     :return: string "Initial request"
     """
     assignments = [
-        dict(identifier=a.identifier, description=a.name) for a in context.assignments
+        dict(
+            identifier=a.identifier,
+            description=a.name,
+            validation_set_size=a.validation_set_size,
+            partial_loading=a.partial_loading,
+        )
+        for a in context.assignments
     ]
     return jsonify(dict(assignments=assignments)), 200, MIME.json
 
@@ -70,6 +76,15 @@ def inputs(assignment_id: AnyIDType) -> RequestResultType:
             )
 
         span.log_kv(dict(assignment=assignment.formatted))
+
+        if assignment.partial_loading:
+            return (
+                jsonify(
+                    dict(error="Inputs need to be loaded individually", success=False)
+                ),
+                404,
+                MIME.json,
+            )
 
         inputs = []
         for mhash, req in assignment.validation_hash_table.items():
