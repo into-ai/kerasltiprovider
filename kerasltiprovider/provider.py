@@ -68,7 +68,7 @@ def inputs(assignment_id: AnyIDType) -> RequestResultType:
 
         try:
             assignment = find_assignment(assignment_id)
-        except (TypeError, ValueError, IndexError):
+        except UnknownAssignmentException:
             log.warning(
                 f"Ingoring request of validation inputs for unknown assignment: {assignment_id}"
             )
@@ -115,7 +115,7 @@ def inputs_single(assignment_id: AnyIDType, input_id: int) -> RequestResultType:
 
         try:
             assignment = find_assignment(assignment_id)
-        except (TypeError, ValueError, IndexError):
+        except UnknownAssignmentException:
             log.warning(
                 f"Ingoring request of validation inputs for unknown assignment: {assignment_id}"
             )
