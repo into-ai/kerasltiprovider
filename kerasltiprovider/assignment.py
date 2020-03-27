@@ -23,6 +23,7 @@ from kerasltiprovider.utils import Datetime, hash_matrix
 
 if TYPE_CHECKING:  # pragma: no cover
     from kerasltiprovider.selection import SelectionStrategy  # noqa: F401
+    from kerasltiprovider.processing import PostprocessingStep  # noqa: F401
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -38,10 +39,25 @@ VDC = typing.TypeVar("VDC", bound="ValidationData")
 
 
 class ValidationData:
-    def __init__(self, matrices: np.ndarray, labels: np.ndarray) -> None:
+    def __init__(
+        self,
+        ds: tf.data.Dataset,
+        resize: typing.Optional[typing.Tuple[int, ...]] = None,
+    ) -> None:
+        self.dataset = ds
+        self.size = resize
+        if resize is not None:
+            self.dataset = self.dataset.map(
+                lambda i, l: (tf.image.resize(i, resize), l)
+            )
+
+    @classmethod
+    def from_numpy(
+        cls: typing.Type[VDC], matrices: np.ndarray, labels: np.ndarray,
+    ) -> VDC:
         assert matrices.shape[0] == labels.shape[0]
-        self.matrices = matrices
-        self.labels = labels
+        dataset = tf.data.Dataset.from_tensor_slices((matrices, labels))
+        return cls(dataset)
 
     @classmethod
     def from_model(cls: typing.Type[VDC], model_file: str, matrices: np.ndarray) -> VDC:
@@ -50,11 +66,8 @@ class ValidationData:
         predicted_classes = np.array([np.argmax(p) for p in predictions])
         return cls(matrices, predicted_classes)
 
-    def items(self) -> typing.List[typing.Tuple[np.ndarray, np.ndarray]]:
-        return list(zip(self.matrices, self.labels))
-
-    def __len__(self) -> int:
-        return max([int(self.matrices.shape[0]), int(self.labels.shape[0])])
+    def items(self) -> tf.data.Dataset:
+        return self.dataset
 
 
 class KerasAssignment:
@@ -65,6 +78,10 @@ class KerasAssignment:
         validation_data: ValidationData,
         input_selection_strategy: "SelectionStrategy",
         validation_set_size: int,
+        partial_loading: typing.Optional[bool] = False,
+        input_postprocessing_steps: typing.Optional[
+            typing.List["PostprocessingStep"]
+        ] = None,
         submission_deadline: typing.Optional[datetime.datetime] = None,
         grading_callback: typing.Optional[typing.Callable[[float], float]] = None,
     ):
@@ -72,6 +89,7 @@ class KerasAssignment:
         self.identifier = identifier
         self.validation_set_size = validation_set_size
         self.submission_deadline = submission_deadline
+        self.partial_loading = partial_loading
         self.input_selection_strategy = input_selection_strategy
         self.grading_callback = grading_callback
 
@@ -82,6 +100,15 @@ class KerasAssignment:
         self.validation_set = self.input_selection_strategy.select(
             self.validation_set_size, self.validation_data
         )
+
+        for postprocessing_step in input_postprocessing_steps or list():
+            self.validation_set = postprocessing_step.process(self.validation_set)
+
+        # Fix changes to shapes during data augmentation
+        if self.validation_data.size is not None:
+            self.validation_set.dataset = self.validation_set.dataset.map(
+                lambda i, l: (tf.image.resize(i, self.validation_data.size), l)
+            )
 
         # Hashed validation set (will only be calculated once on demand)
         self._validation_hash_table: ValHTType = dict()
@@ -96,7 +123,6 @@ class KerasAssignment:
             if not self.submission_deadline
             else self.submission_deadline.isoformat(),
             input_selection_strategy=self.input_selection_strategy.__class__.__name__,
-            validation_set_preview=self.validation_set.items()[:1],
             validation_hash_table_preview=list(self.validation_hash_table.items())[:1],
         )
 
@@ -127,9 +153,9 @@ class KerasAssignment:
                 raise SubmissionAfterDeadlineException(
                     f"The deadline for submission was on {'?' if not self.submission_deadline else self.submission_deadline.isoformat()}"
                 )
-            if not len(predictions) == len(self.validation_set):
+            if not len(predictions) == self.validation_set_size:
                 raise SubmissionValidationError(
-                    f"Expected {len(self.validation_set)} predictions"
+                    f"Expected {self.validation_set_size} predictions"
                 )
             num_correct = 0
             if not Database.assignments:
@@ -148,7 +174,7 @@ class KerasAssignment:
                     if float(reference_prediction) == float(prediction):
                         num_correct += 1
 
-            accuracy = round(num_correct / len(self.validation_set), ndigits=2)
+            accuracy = round(num_correct / self.validation_set_size, ndigits=2)
             score = round(
                 accuracy
                 if not self.grading_callback
@@ -173,7 +199,8 @@ class KerasAssignment:
                 # Save to redis key value database
                 for matrix_hash, request in self.validation_hash_table.items():
                     try:
-                        input_matrix = request["matrix"]
+                        _input_matrix: tf.Tensor = request["matrix"]
+                        input_matrix = _input_matrix.numpy()
                         assert isinstance(input_matrix, np.ndarray)
                         predicted_class = int(request["predicted"])
                         pipe.hset(
