@@ -15,7 +15,11 @@ def rotate(image: tf.Tensor, max_rotation_degrees: float) -> tf.Tensor:
     return tfa.image.rotate(image, random_angles)
 
 
-def zoom(x: tf.Tensor, scales: typing.List[float]) -> tf.Tensor:
+def zoom(
+    x: tf.Tensor,
+    scales: typing.List[float],
+    application_possibility: typing.Optional[float] = None,
+) -> tf.Tensor:
     boxes = np.zeros((len(scales), 4))
 
     for i, scale in enumerate(scales):
@@ -26,7 +30,10 @@ def zoom(x: tf.Tensor, scales: typing.List[float]) -> tf.Tensor:
     def random_crop(img: tf.Tensor) -> tf.Tensor:
         # Create different crops for an image
         crops = tf.image.crop_and_resize(
-            [img], boxes=boxes, box_indices=np.zeros(len(scales)), crop_size=(32, 32)
+            [img],
+            boxes=boxes,
+            box_indices=np.zeros(len(scales)),
+            crop_size=img.shape[:-1],
         )
         # Return a random crop
         return crops[
@@ -35,8 +42,10 @@ def zoom(x: tf.Tensor, scales: typing.List[float]) -> tf.Tensor:
 
     choice = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32)
 
-    # Only apply cropping 50% of the time
-    image = tf.cond(choice < 0.5, lambda: x, lambda: random_crop(x))
+    # Only apply cropping some amount of the time
+    image = tf.cond(
+        choice < (application_possibility or 1.0), lambda: random_crop(x), lambda: x
+    )
     return image
 
 
