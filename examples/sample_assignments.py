@@ -13,6 +13,7 @@ from kerasltiprovider.utils import interpolate_accuracy
 import datetime
 import os
 import logging
+import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
@@ -35,7 +36,7 @@ def np_mnist_assignment():
         name="Exercise 2: Build your second network",
         identifier="2",
         # Data used for validation
-        validation_data=ValidationData(test_images, test_labels),
+        validation_data=ValidationData.from_numpy(test_images, test_labels),
         # Selection strategy used to choose `validation_set_size` items from the `validation_data`
         input_selection_strategy=RandomSelectionStrategy(seed=20),
         # Size of the validation set used for calculating the accuracy
@@ -58,14 +59,18 @@ def tf_woof_assignment():
                     interpolate_accuracy(accuracy, min=0.0, max=0.8), ndigits=2
                 )
 
+    # Data augmentation parameters
+    # Generate 20 crop settings, ranging from a 1% to 20% crop.
+    scales = list(np.arange(0.8, 1.0, 0.01))
+
     return KerasAssignment(
         name="Exercise 3: Build a complex network",
         identifier="3",
         # Data used for validation
-        validation_data=ValidationData.from_tf_dataset(test_data, resize=(300, 300)),
+        validation_data=ValidationData(test_data, resize=(300, 300)),
         # Selection strategy used to choose `validation_set_size` items from the `validation_data`
         input_selection_strategy=RandomSelectionStrategy(seed=1234),
-        input_postprocessing_steps=[Augment(rotation_range=2)],
+        input_postprocessing_steps=[Augment(rotate=10, zoom=scales)],
         # Size of the validation set used for calculating the accuracy
         validation_set_size=200,
         partial_loading=True,
@@ -78,4 +83,4 @@ def tf_woof_assignment():
 
 
 # This will be read into the config
-ASSIGNMENTS = [np_mnist_assignment(), tf_woof_assignment()]
+ASSIGNMENTS = [tf_woof_assignment(), np_mnist_assignment()]

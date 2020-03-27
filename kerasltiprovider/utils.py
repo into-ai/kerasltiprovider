@@ -13,7 +13,10 @@ def hash_matrix(m: np.ndarray) -> str:
         Note: hashlib is used because the builtin python hash() function is not
         cryptographically stable across invocations
     """
-    return hashlib.sha256(m.data.tobytes()).hexdigest()
+    np_m = m
+    if not isinstance(m, np.ndarray):
+        np_m = m.numpy()
+    return hashlib.sha256(np_m.data.tobytes()).hexdigest()
 
 
 def hash_user_id(

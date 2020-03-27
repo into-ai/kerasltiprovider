@@ -49,7 +49,9 @@ def mock_assignment1() -> KerasAssignment:
         return KerasAssignment(
             name="Mock Exercise 1",
             identifier="12",
-            validation_data=ValidationData(validation_data, validation_label),
+            validation_data=ValidationData.from_numpy(
+                validation_data, validation_label
+            ),
             validation_set_size=len(validation_data),
             input_selection_strategy=RandomSelectionStrategy(seed=20),
             submission_deadline=datetime.datetime(
@@ -110,12 +112,11 @@ def test_grade_calculation() -> None:
             mock_input_hashes[3]: 1,  # wrong
         }
 
-        validation_data = ValidationData(
+        validation_data = ValidationData.from_numpy(
             mock_inputs, np.array(np.array([0] * len(mock_input_matrices)))
         )
 
         assert [hash_matrix(m) for m in mock_inputs] == mock_input_hashes
-        assert mock_input_hashes[0] == hash_matrix(validation_data.matrices[0])
 
         mock_assignment = KerasAssignment(
             name="Mock Exercise 1",
