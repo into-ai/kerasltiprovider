@@ -17,6 +17,7 @@ import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
+import tensorflow_datasets as tfds
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 logging.getLogger("kerasltiprovider").setLevel(logging.DEBUG)
@@ -41,7 +42,7 @@ def np_mnist_assignment():
         input_selection_strategy=RandomSelectionStrategy(seed=20),
         # Size of the validation set used for calculating the accuracy
         validation_set_size=200,
-        partial_loading=True,
+        partial_loading=False,
         # Deadline for submission, later submission will not be accepted
         submission_deadline=datetime.datetime(
             year=2020, month=12, day=31, hour=23, minute=59
@@ -51,8 +52,7 @@ def np_mnist_assignment():
 
 
 def tf_woof_assignment():
-    from deeplearning2020.datasets import ImageWoof
-    _, test_data, _ = ImageWoof.load_data()
+    test_data = tfds.load('tf_flowers', split="train[80%:100%]", as_supervised=True)
 
     def grading_func(accuracy):
         return round(
