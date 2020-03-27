@@ -92,7 +92,6 @@ def on_error(
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                raise e
                 return handler(dict(exception=e))
 
         return catch_exceptions
