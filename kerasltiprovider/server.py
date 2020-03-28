@@ -38,13 +38,14 @@ class KerasLTIProvider:
         self.connect_redis()
 
         # Insert assignment inputs into redis database
-        if not str(self.app.config.get("KEEP_ASSIGNMENTS_DATABASE")).lower() == "true":
+        if str(self.app.config.get("RECREATE_ASSIGNMENTS_DATABASE")).lower() == "true":
             self.app.logger.info("Flushing assignments")
             if Database.assignments:
                 Database.assignments.flushdb()
             self.app.logger.info("Creating validation hash table for assignments")
             for a in context.assignments:
-                a.save_validation_hash_table()
+                if a.validation_dataset:
+                    a.validation_dataset.ingest(Database.assignments)
 
     def setup_logging(self) -> None:
         level = self.app.config.get("LOG_LEVEL") or "INFO"

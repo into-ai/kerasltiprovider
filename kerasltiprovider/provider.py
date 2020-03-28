@@ -3,7 +3,6 @@ import logging
 
 import numpy as np
 import pylti
-import tensorflow as tf
 from flask import Blueprint, current_app, jsonify, render_template, url_for
 from lti import ToolConsumer
 from pylti.flask import lti
@@ -46,7 +45,7 @@ def assignments() -> RequestResultType:
         dict(
             identifier=a.identifier,
             description=a.name,
-            validation_set_size=a.validation_set_size,
+            validation_set_size=a.validation_set_size(),
             partial_loading=a.partial_loading,
         )
         for a in context.assignments
@@ -88,9 +87,8 @@ def inputs(assignment_id: AnyIDType) -> RequestResultType:
             )
 
         inputs = []
-        for mhash, req in assignment.validation_hash_table.items():
-            _matrix: tf.Tensor = req["matrix"]
-            matrix = _matrix.numpy()
+        for mhash, req in assignment.validation_hash_table().items():
+            matrix: np.ndarray = req["matrix"]
             if not isinstance(matrix, np.ndarray):
                 raise InvalidValidationHashTableException(
                     "Validation hash table contains key without prediction",
@@ -129,22 +127,21 @@ def inputs_single(assignment_id: AnyIDType, input_id: int) -> RequestResultType:
             input_id = int(input_id)
         except ValueError:
             return (
-                jsonify(dict(error="Input_id needs to be an integer", success=False)),
-                404,
+                jsonify(dict(error="Input ID needs to be an integer", success=False)),
+                400,
                 MIME.json,
             )
 
-        if input_id >= len(assignment.validation_hash_table.items()):
+        if input_id >= len(assignment.validation_hash_table().items()):
             return (
                 jsonify(dict(error="You exceeded the number of Inputs", success=False)),
-                404,
+                400,
                 MIME.json,
             )
 
         inputs = []
-        mhash, req = list(assignment.validation_hash_table.items())[input_id]
-        _matrix: tf.Tensor = req["matrix"]
-        matrix = _matrix.numpy()
+        mhash, req = list(assignment.validation_hash_table().items())[input_id]
+        matrix: np.ndarray = req["matrix"]
         if not isinstance(matrix, np.ndarray):
             raise InvalidValidationHashTableException(
                 "Validation hash table contains key without prediction",
@@ -282,8 +279,8 @@ def health() -> RequestResultType:
     return jsonify(dict(healthy=True)), 200, MIME.json
 
 
-@mod.route("/launch", methods=["POST", "GET"])
-def launch() -> RequestResultType:
+@mod.route("/launch/<assignment_id>", methods=["POST", "GET"])
+def launch(assignment_id: AnyIDType) -> RequestResultType:
     if (
         str(current_app.config.get("ENABLE_DEBUG_LAUNCHER")).lower() == "true"
         and str(current_app.config.get("PRODUCTION")).lower() == "false"
@@ -297,7 +294,7 @@ def launch() -> RequestResultType:
         params = dict(
             lti_message_type="basic-lti-launch-request",
             lti_version="lti_version",
-            resource_link_id=2,
+            resource_link_id=assignment_id,
             context_id="Open HPI",
             user_id="max",
             roles=["student"],
@@ -311,7 +308,7 @@ def launch() -> RequestResultType:
         params[
             current_app.config.get("LAUNCH_ASSIGNMENT_ID_PARAM")
             or "custom_x-assignment-id"
-        ] = 2
+        ] = assignment_id
         consumer = ToolConsumer(
             consumer_key=current_app.config.get("CONSUMER_KEY"),
             consumer_secret=current_app.config.get("CONSUMER_KEY_SECRET"),

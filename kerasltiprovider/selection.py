@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 import tensorflow as tf
 
-from kerasltiprovider.assignment import ValidationData
+from kerasltiprovider.validation import ValidationData
 
 
 class SelectionStrategy(ABC):

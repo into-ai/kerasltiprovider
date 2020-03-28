@@ -121,8 +121,8 @@ PYLTI_CONFIG = dict(
 # Set the log level
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
-# Whether the input data database should not be reset upon restarts
-KEEP_ASSIGNMENTS_DATABASE = os.environ.get("KEEP_ASSIGNMENTS_DATABASE", "False")
+# Whether the input data database should be recreated upon restart
+RECREATE_ASSIGNMENTS_DATABASE = os.environ.get("RECREATE_ASSIGNMENTS_DATABASE", "False")
 
 # Whether a debug LTI consumer should provide a launch at /launch
 ENABLE_DEBUG_LAUNCHER = os.environ.get("ENABLE_DEBUG_LAUNCHER", "False")

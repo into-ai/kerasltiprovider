@@ -30,6 +30,10 @@ def hash_user_id(
     return str(hashlib.md5(hash_key.encode("utf-8")).hexdigest())
 
 
+def input_key_for(identifier: str, matrix_hash: str) -> str:
+    return f"{identifier}:{matrix_hash}"
+
+
 def slash_join(*args: str) -> str:
     return reduce(urljoin, args).rstrip("/")
 
