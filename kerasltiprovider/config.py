@@ -24,9 +24,15 @@ REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
 JAEGER_HOST = os.environ.get("JAEGER_HOST", "localhost")
 JAEGER_PORT = os.environ.get("JAEGER_PORT", 6831)
 
+# Validator backend
+VALIDATOR_HOST = os.environ.get("VALIDATOR_HOST", "localhost")
+VALIDATOR_PORT = os.environ.get("VALIDATOR_PORT", 9000)
+
 # Service config
 PORT = os.environ.get("PORT", 3000)
 HOST = os.environ.get("HOST", "0.0.0.0")
+
+ASSIGNMENT_CACHE_TIME_HOURS = os.environ.get("ASSIGNMENT_CACHE_TIME_HOURS", 16)
 
 # Path to register the blueprint under
 # This does not make sense with env vars but when

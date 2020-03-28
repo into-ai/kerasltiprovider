@@ -1,30 +1,20 @@
 import datetime
-import json
 import logging
 import os
 import typing
-from typing import TYPE_CHECKING
 
-import cachetools
-import numpy as np
+import requests
+from flask import current_app
 
 from kerasltiprovider import context
-from kerasltiprovider.database import Database
 from kerasltiprovider.exceptions import (
-    NoDatabaseException,
     SubmissionAfterDeadlineException,
-    SubmissionValidationError,
     UnknownAssignmentException,
-    UnknownDatasetException,
 )
 from kerasltiprovider.ingest import KerasAssignmentValidationSet
 from kerasltiprovider.tracer import Tracer
-from kerasltiprovider.types import AnyIDType, KerasBaseAssignment, PredType, ValHTType
+from kerasltiprovider.types import AnyIDType, KerasBaseAssignment, PredType
 from kerasltiprovider.utils import Datetime
-
-if TYPE_CHECKING:  # pragma: no cover
-    from kerasltiprovider.selection import SelectionStrategy  # noqa: F401
-    from kerasltiprovider.processing import PostprocessingStep  # noqa: F401
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -39,7 +29,6 @@ class KerasAssignment(KerasBaseAssignment):
         self,
         name: str,
         identifier: AnyIDType,
-        partial_loading: typing.Optional[bool] = False,
         submission_deadline: typing.Optional[datetime.datetime] = None,
         grading_callback: typing.Optional[typing.Callable[[float], float]] = None,
         validation_dataset: typing.Optional[KerasAssignmentValidationSet] = None,
@@ -47,7 +36,6 @@ class KerasAssignment(KerasBaseAssignment):
         super().__init__(identifier=identifier)
         self.name = name
         self.submission_deadline = submission_deadline
-        self.partial_loading = partial_loading
         self.grading_callback = grading_callback
         self.validation_dataset = validation_dataset
 
@@ -61,44 +49,16 @@ class KerasAssignment(KerasBaseAssignment):
             else self.submission_deadline.isoformat(),
         )
 
-    # Cache for 16 hours
-    @cachetools.cached(cachetools.TTLCache(1, 16 * 60 * 60))
-    def validation_hash_table(self) -> ValHTType:
-        if self.validation_dataset:
-            return self.validation_dataset.validation_hash_table()
-
-        # Lookup assignment data from database
-        if not Database.assignments:
-            raise NoDatabaseException(
-                "Cannot load validation hash table without database"
-            )
-
-        validation_hash_table: ValHTType = dict()
-        for key in Database.assignments.scan_iter(match=f"{self.identifier}:*"):
-            _predicted, _hash, _input = Database.assignments.hmget(
-                key, "predicted", "hash", "input"
-            )
-            validation_hash_table[_hash] = dict(
-                matrix=np.asarray(json.loads(_input)), predicted=_predicted
-            )
-        return validation_hash_table
-
-    # Cache for 16 hours
-    @cachetools.cached(cachetools.TTLCache(1, 16 * 60 * 60))
-    def validation_set_size(self) -> int:
-        if self.validation_dataset:
-            return self.validation_dataset.validation_set_size
-
-        # Lookup assignment data from database
-        if not Database.assignments:
-            raise NoDatabaseException(
-                "Cannot calculate validation_set_size without database"
-            )
-
-        size = 0
-        for _ in Database.assignments.scan_iter(match=f"{self.identifier}:*"):
-            size += 1
-        return size
+    def rpc_validation_backend(
+        self, route: str, data: typing.Optional[typing.Dict[str, typing.Any]] = None
+    ) -> typing.Any:
+        vhost = current_app.config.get("VALIDATOR_HOST")
+        vport = current_app.config.get("VALIDATOR_PORT")
+        response = requests.post(
+            f"http://{vhost}:{vport}/internal/assignment/{self.identifier}{route}",
+            json=data or dict(),
+        )
+        return response.json()
 
     def still_open(self, date: typing.Optional[Datetime] = None) -> bool:
         with Tracer.main().start_active_span("KerasAssignment.still_open") as scope:
@@ -117,37 +77,21 @@ class KerasAssignment(KerasBaseAssignment):
                 raise SubmissionAfterDeadlineException(
                     f"The deadline for submission was on {'?' if not self.submission_deadline else self.submission_deadline.isoformat()}"
                 )
-            if not len(predictions) == self.validation_set_size():
-                raise SubmissionValidationError(
-                    f"Expected {self.validation_set_size()} predictions"
-                )
-            num_correct = 0
-            if not Database.assignments:
-                raise NoDatabaseException
-            for matrix_hash, prediction in predictions.items():
-                reference_prediction = Database.assignments.hget(
-                    self.input_key_for(matrix_hash), "predicted"
-                )
-                if reference_prediction is None:
-                    raise UnknownDatasetException(
-                        "Cannot validate your results. Is this the correct assignment?"
+            accuracy = round(
+                float(
+                    self.rpc_validation_backend("/validate", data=predictions).get(
+                        "accuracy", 0
                     )
-                elif prediction is None:
-                    pass
-                else:
-                    if float(reference_prediction) == float(prediction):
-                        num_correct += 1
-
-            accuracy = round(num_correct / self.validation_set_size(), ndigits=2)
+                ),
+                ndigits=2,
+            )
             score = round(
                 accuracy
                 if not self.grading_callback
                 else self.grading_callback(accuracy),
                 ndigits=2,
             )
-            scope.span.log_kv(
-                dict(num_correct=num_correct, score=score, accuracy=accuracy)
-            )
+            scope.span.log_kv(dict(score=score, accuracy=accuracy))
             return accuracy, score
 
 

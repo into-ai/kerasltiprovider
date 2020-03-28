@@ -24,37 +24,36 @@ def np_mnist_assignment():
     test_images = test_images / 255.0
 
     def grading_func(accuracy):
-        return round(
-                    interpolate_accuracy(accuracy, min=0.0, max=0.8), ndigits=2
-                )
+        return round(interpolate_accuracy(accuracy, min=0.0, max=0.8), ndigits=2)
+
+    """
+    validation_dataset=KerasAssignmentValidationSet(
+        identifier=identifier,
+        validation_data=ValidationData.from_numpy(test_images, test_labels),
+        # Selection strategy used to choose `validation_set_size` items from the `validation_data`
+        input_selection_strategy=RandomSelectionStrategy(seed=20),
+        # Size of the validation set used for calculating the accuracy
+        validation_set_size=200,
+    ),
+    """
 
     identifier = "2"
     return KerasAssignment(
         name="Exercise 2: Build your second network",
         identifier=identifier,
         # Data used for validation
-        validation_dataset=KerasAssignmentValidationSet(
-            identifier=identifier,
-            validation_data=ValidationData.from_numpy(test_images, test_labels),
-            # Selection strategy used to choose `validation_set_size` items from the `validation_data`
-            input_selection_strategy=RandomSelectionStrategy(seed=20),
-            # Size of the validation set used for calculating the accuracy
-            validation_set_size=200,
-        ),
-        partial_loading=False,
         # Deadline for submission, later submission will not be accepted
         submission_deadline=datetime.datetime(
             year=2020, month=12, day=31, hour=23, minute=59
         ),
-        grading_callback=grading_func
+        grading_callback=grading_func,
     )
 
 
 def tf_flowers_assignment():
     def grading_func(accuracy):
-        return round(
-                    interpolate_accuracy(accuracy, min=0.0, max=0.8), ndigits=2
-                )
+        return round(interpolate_accuracy(accuracy, min=0.0, max=0.8), ndigits=2)
+
     return KerasAssignment(
         name="Exercise 3: Build a complex network",
         identifier="3",
@@ -63,12 +62,11 @@ def tf_flowers_assignment():
         # You can connect to the redis database and remotely insert the data.
         # Have a look at the `populate-database-example.py`.
         validation_dataset=None,
-        partial_loading=True,
         # Deadline for submission, later submission will not be accepted
         submission_deadline=datetime.datetime(
             year=2020, month=12, day=31, hour=23, minute=59
         ),
-        grading_callback=grading_func
+        grading_callback=grading_func,
     )
 
 

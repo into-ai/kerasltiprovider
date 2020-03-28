@@ -55,6 +55,7 @@ class KerasAssignmentValidationSet(KerasBaseAssignment):
         # Hashed validation set (will only be calculated once on demand)
         self._validation_hash_table: ValHTType = dict()
 
+    @property
     def validation_hash_table(self) -> ValHTType:
         if len(self._validation_hash_table) > 0:
             return self._validation_hash_table
@@ -70,31 +71,37 @@ class KerasAssignmentValidationSet(KerasBaseAssignment):
         db = redis.Redis(host=hostname, port=port, db=1, decode_responses=True)
         self.ingest(db)
 
-    def ingest(self, db: typing.Optional[redis.Redis] = None) -> None:
+    def _ingest(self, pipe: typing.Union[redis.Redis, redis.Pipeline]) -> None:
+        for matrix_hash, request in self.validation_hash_table.items():
+            try:
+                input_matrix: np.ndarray = request["matrix"]
+                assert isinstance(input_matrix, np.ndarray)
+                predicted_class = int(request["predicted"])
+                pipe.hset(
+                    input_key_for(self.identifier, matrix_hash),
+                    "input",
+                    json.dumps(input_matrix.tolist()),
+                )
+                pipe.hset(
+                    input_key_for(self.identifier, matrix_hash), "hash", matrix_hash,
+                )
+                pipe.hset(
+                    input_key_for(self.identifier, matrix_hash),
+                    "predicted",
+                    predicted_class,
+                )
+            except Exception as e:
+                raise e
+
+    def ingest(
+        self, db: typing.Optional[redis.Redis] = None, pipelined: bool = False
+    ) -> None:
         _db = db or Database.assignments
         if not _db:
             raise NoDatabaseException("No database for ingestion")
-        with _db.pipeline() as pipe:
-            for matrix_hash, request in self.validation_hash_table().items():
-                try:
-                    input_matrix: np.ndarray = request["matrix"]
-                    assert isinstance(input_matrix, np.ndarray)
-                    predicted_class = int(request["predicted"])
-                    pipe.hset(
-                        input_key_for(self.identifier, matrix_hash),
-                        "input",
-                        json.dumps(input_matrix.tolist()),
-                    )
-                    pipe.hset(
-                        input_key_for(self.identifier, matrix_hash),
-                        "hash",
-                        matrix_hash,
-                    )
-                    pipe.hset(
-                        input_key_for(self.identifier, matrix_hash),
-                        "predicted",
-                        predicted_class,
-                    )
-                except Exception as e:
-                    raise e
-            pipe.execute()
+        if pipelined:
+            with _db.pipeline() as pipe:
+                self._ingest(pipe)
+                pipe.execute()
+        else:
+            self._ingest(_db)
