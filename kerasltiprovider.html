@@ -159,55 +159,8 @@
 <span id="kerasltiprovider-cli-module"></span><h2>kerasltiprovider.cli module<a class="headerlink" href="#module-kerasltiprovider.cli" title="Permalink to this headline">¶</a></h2>
 <p>Console script for kerasltiprovider.</p>
 </div>
-<div class="section" id="module-kerasltiprovider.kerasltiprovider">
-<span id="kerasltiprovider-kerasltiprovider-module"></span><h2>kerasltiprovider.kerasltiprovider module<a class="headerlink" href="#module-kerasltiprovider.kerasltiprovider" title="Permalink to this headline">¶</a></h2>
-<p>Main module.</p>
-<dl class="class">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider">
-<em class="property">class </em><code class="sig-prename descclassname">kerasltiprovider.kerasltiprovider.</code><code class="sig-name descname">KerasLTIProvider</code><span class="sig-paren">(</span><em class="sig-param">app: flask.app.Flask</em>, <em class="sig-param">assignments: Optional[List[kerasltiprovider.assignment.KerasAssignment]] = None</em>, <em class="sig-param">lti_config: Optional[Dict[str</em>, <em class="sig-param">Any]] = None</em>, <em class="sig-param">config: Optional[Dict[str</em>, <em class="sig-param">Any]] = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.blueprint">
-<code class="sig-name descname">blueprint</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; flask.blueprints.Blueprint<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.blueprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.blueprint" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.check_assignments">
-<code class="sig-name descname">check_assignments</code><span class="sig-paren">(</span><em class="sig-param">assignments: Optional[List[kerasltiprovider.assignment.KerasAssignment]]</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.check_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.check_assignments" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.connect_redis">
-<code class="sig-name descname">connect_redis</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.connect_redis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.connect_redis" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.connect_tracer">
-<code class="sig-name descname">connect_tracer</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.connect_tracer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.connect_tracer" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.create">
-<em class="property">classmethod </em><code class="sig-name descname">create</code><span class="sig-paren">(</span><em class="sig-param">assignments: Optional[List[kerasltiprovider.assignment.KerasAssignment]] = None</em>, <em class="sig-param">lti_config: Optional[Dict[str</em>, <em class="sig-param">Any]] = None</em>, <em class="sig-param">config: Optional[Dict[str</em>, <em class="sig-param">Any]] = None</em><span class="sig-paren">)</span> &#x2192; KLTIPType<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.create" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.load_config">
-<code class="sig-name descname">load_config</code><span class="sig-paren">(</span><em class="sig-param">config: Optional[Dict[str, Any]], lti_config: Optional[Dict[str, Any]]</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.load_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.load_config" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.run" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="method">
-<dt id="kerasltiprovider.kerasltiprovider.KerasLTIProvider.setup_logging">
-<code class="sig-name descname">setup_logging</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/kerasltiprovider/kerasltiprovider.html#KerasLTIProvider.setup_logging"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#kerasltiprovider.kerasltiprovider.KerasLTIProvider.setup_logging" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+<div class="section" id="kerasltiprovider-kerasltiprovider-module">
+<h2>kerasltiprovider.kerasltiprovider module<a class="headerlink" href="#kerasltiprovider-kerasltiprovider-module" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="module-kerasltiprovider">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-kerasltiprovider" title="Permalink to this headline">¶</a></h2>
