@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from kerasltiprovider.assignment import ValidationData
+from kerasltiprovider.validation import ValidationData
 
 
 def rotate(image: tf.Tensor, max_rotation_degrees: float) -> tf.Tensor:

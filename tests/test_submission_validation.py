@@ -7,13 +7,15 @@ import fakeredis
 import numpy as np
 import pytest
 
-from kerasltiprovider.assignment import KerasAssignment, ValidationData
+from kerasltiprovider.assignment import KerasAssignment, KerasAssignmentValidationSet
+from kerasltiprovider.database import Database
 from kerasltiprovider.exceptions import (
     SubmissionAfterDeadlineException,
     SubmissionValidationError,
 )
 from kerasltiprovider.selection import RandomSelectionStrategy
 from kerasltiprovider.utils import Datetime, hash_matrix, interpolate_accuracy
+from kerasltiprovider.validation import ValidationData
 
 
 def to_matrix(x: typing.List[int], y: typing.List[int]) -> np.ndarray:
@@ -46,14 +48,18 @@ def mock_assignment1() -> KerasAssignment:
         "kerasltiprovider.assignment.KerasAssignment"
     ) as mocked_model:
         mocked_model.return_value = unittest.mock.MagicMock
+        assignment_id = "12"
         return KerasAssignment(
             name="Mock Exercise 1",
-            identifier="12",
-            validation_data=ValidationData.from_numpy(
-                validation_data, validation_label
+            identifier=assignment_id,
+            validation_dataset=KerasAssignmentValidationSet(
+                identifier=assignment_id,
+                validation_data=ValidationData.from_numpy(
+                    validation_data, validation_label
+                ),
+                validation_set_size=len(validation_data),
+                input_selection_strategy=RandomSelectionStrategy(seed=20),
             ),
-            validation_set_size=len(validation_data),
-            input_selection_strategy=RandomSelectionStrategy(seed=20),
             submission_deadline=datetime.datetime(
                 year=2019, month=12, day=31, hour=23, minute=59
             ),
@@ -118,18 +124,23 @@ def test_grade_calculation() -> None:
 
         assert [hash_matrix(m) for m in mock_inputs] == mock_input_hashes
 
+        assignment_id = "0"
         mock_assignment = KerasAssignment(
             name="Mock Exercise 1",
-            identifier="0",
-            validation_data=validation_data,
-            validation_set_size=len(hashed_mock_input_matrices.values()),
-            input_selection_strategy=RandomSelectionStrategy(seed=20),
+            identifier=assignment_id,
+            validation_dataset=KerasAssignmentValidationSet(
+                identifier=assignment_id,
+                validation_data=validation_data,
+                validation_set_size=len(hashed_mock_input_matrices.values()),
+                input_selection_strategy=RandomSelectionStrategy(seed=20),
+            ),
             submission_deadline=datetime.datetime(
                 year=2019, month=12, day=31, hour=23, minute=59
             ),
         )
 
-        mock_assignment.save_validation_hash_table()
+        if mock_assignment.validation_dataset:
+            mock_assignment.validation_dataset.ingest(Database.assignments)
 
         with unittest.mock.patch(
             "kerasltiprovider.utils.Datetime.now", spec=Datetime
