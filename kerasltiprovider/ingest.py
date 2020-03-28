@@ -55,6 +55,7 @@ class KerasAssignmentValidationSet(KerasBaseAssignment):
         # Hashed validation set (will only be calculated once on demand)
         self._validation_hash_table: ValHTType = dict()
 
+    @property
     def validation_hash_table(self) -> ValHTType:
         if len(self._validation_hash_table) > 0:
             return self._validation_hash_table
@@ -75,7 +76,7 @@ class KerasAssignmentValidationSet(KerasBaseAssignment):
         if not _db:
             raise NoDatabaseException("No database for ingestion")
         with _db.pipeline() as pipe:
-            for matrix_hash, request in self.validation_hash_table().items():
+            for matrix_hash, request in self.validation_hash_table.items():
                 try:
                     input_matrix: np.ndarray = request["matrix"]
                     assert isinstance(input_matrix, np.ndarray)

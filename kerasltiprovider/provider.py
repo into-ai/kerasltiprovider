@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-import numpy as np
 import pylti
 from flask import Blueprint, current_app, jsonify, render_template, url_for
 from lti import ToolConsumer
@@ -9,9 +8,10 @@ from pylti.flask import lti
 
 from kerasltiprovider import context
 from kerasltiprovider.assignment import find_assignment
+from kerasltiprovider.database import Database
 from kerasltiprovider.exceptions import (
     ConfigurationErrorException,
-    InvalidValidationHashTableException,
+    NoDatabaseException,
     PostingGradeFailedException,
     UnknownAssignmentException,
 )
@@ -45,58 +45,11 @@ def assignments() -> RequestResultType:
         dict(
             identifier=a.identifier,
             description=a.name,
-            validation_set_size=a.validation_set_size(),
             partial_loading=a.partial_loading,
         )
         for a in context.assignments
     ]
     return jsonify(dict(assignments=assignments)), 200, MIME.json
-
-
-@mod.route("/assignment/<assignment_id>/inputs", methods=["POST", "GET"])
-@on_error(handler=error_handler)
-def inputs(assignment_id: AnyIDType) -> RequestResultType:
-    """
-    access route with 'initial' request only, subsequent requests are not allowed.
-
-    :param: lti: `lti` object
-    :return: string "Initial request"
-    """
-    with Tracer.main().start_span("assignment_inputs") as span:
-        span.set_tag("assignment_id", assignment_id)
-
-        try:
-            assignment = find_assignment(assignment_id)
-        except UnknownAssignmentException:
-            log.warning(
-                f"Ingoring request of validation inputs for unknown assignment: {assignment_id}"
-            )
-            raise UnknownAssignmentException(
-                "Unknown assignment", assignment_id=assignment_id, status=404
-            )
-
-        span.log_kv(dict(assignment=assignment.formatted))
-
-        if assignment.partial_loading:
-            return (
-                jsonify(
-                    dict(error="Inputs need to be loaded individually", success=False)
-                ),
-                404,
-                MIME.json,
-            )
-
-        inputs = []
-        for mhash, req in assignment.validation_hash_table().items():
-            matrix: np.ndarray = req["matrix"]
-            if not isinstance(matrix, np.ndarray):
-                raise InvalidValidationHashTableException(
-                    "Validation hash table contains key without prediction",
-                    assignment_id=assignment_id,
-                )
-            inputs.append(dict(matrix=matrix.tolist(), hash=mhash))
-        span.log_kv(dict(predict=inputs))
-        return jsonify(dict(predict=inputs)), 200, MIME.json
 
 
 @mod.route("/assignment/<assignment_id>/inputs/<input_id>", methods=["POST", "GET"])
@@ -132,24 +85,54 @@ def inputs_single(assignment_id: AnyIDType, input_id: int) -> RequestResultType:
                 MIME.json,
             )
 
-        if input_id >= len(assignment.validation_hash_table().items()):
+        if input_id >= assignment.validation_set_size:
             return (
                 jsonify(dict(error="You exceeded the number of Inputs", success=False)),
                 400,
                 MIME.json,
             )
 
-        inputs = []
-        mhash, req = list(assignment.validation_hash_table().items())[input_id]
-        matrix: np.ndarray = req["matrix"]
-        if not isinstance(matrix, np.ndarray):
-            raise InvalidValidationHashTableException(
-                "Validation hash table contains key without prediction",
-                assignment_id=assignment_id,
+        if not Database.assignments:
+            raise NoDatabaseException("Failed to connect to database")
+
+        key = assignment.validation_set_input_hashes[input_id]
+        _hash, _input = Database.assignments.hmget(key, "hash", "input")
+        if None in [_hash, _input]:
+            return (
+                jsonify(
+                    dict(error="Internal error while fetching data", success=False)
+                ),
+                500,
+                MIME.json,
             )
-        inputs.append(dict(matrix=matrix.tolist(), hash=mhash))
-        span.log_kv(dict(predict=inputs))
-        return jsonify(dict(predict=inputs)), 200, MIME.json
+        content = '{"predict": [{"hash": "' + _hash + '", "matrix": ' + _input + "}]}"
+        return content, 200, MIME.json
+
+
+@mod.route("/assignment/<assignment_id>/size", methods=["POST", "GET"])
+@on_error(handler=error_handler)
+def validation_set_size(assignment_id: AnyIDType) -> RequestResultType:
+    """
+    access route with 'initial' request only, subsequent requests are not allowed.
+
+    :param: lti: `lti` object
+    :return: string "Initial request"
+    """
+    with Tracer.main().start_span("assignment_size") as span:
+        span.set_tag("assignment_id", assignment_id)
+
+        try:
+            assignment = find_assignment(assignment_id)
+        except UnknownAssignmentException:
+            log.warning(
+                f"Ingoring request of validation inputs for unknown assignment: {assignment_id}"
+            )
+            raise UnknownAssignmentException(
+                "Unknown assignment", assignment_id=assignment_id, status=404
+            )
+
+        span.log_kv(dict(assignment=assignment.formatted))
+        return jsonify(dict(size=assignment.validation_set_size)), 200, MIME.json
 
 
 @mod.route("/start", methods=["POST", "GET"])

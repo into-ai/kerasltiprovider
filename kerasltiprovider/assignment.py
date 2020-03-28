@@ -1,12 +1,7 @@
 import datetime
-import json
 import logging
 import os
 import typing
-from typing import TYPE_CHECKING
-
-import cachetools
-import numpy as np
 
 from kerasltiprovider import context
 from kerasltiprovider.database import Database
@@ -21,10 +16,6 @@ from kerasltiprovider.ingest import KerasAssignmentValidationSet
 from kerasltiprovider.tracer import Tracer
 from kerasltiprovider.types import AnyIDType, KerasBaseAssignment, PredType, ValHTType
 from kerasltiprovider.utils import Datetime
-
-if TYPE_CHECKING:  # pragma: no cover
-    from kerasltiprovider.selection import SelectionStrategy  # noqa: F401
-    from kerasltiprovider.processing import PostprocessingStep  # noqa: F401
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -51,6 +42,11 @@ class KerasAssignment(KerasBaseAssignment):
         self.grading_callback = grading_callback
         self.validation_dataset = validation_dataset
 
+        # Will be lazily initialized
+        self._validation_set_input_hashes: typing.Optional[typing.List[str]] = None
+        self._validation_hash_table: typing.Optional[ValHTType] = None
+        self._validation_set_size: typing.Optional[int] = None
+
     @property
     def formatted(self) -> typing.Dict[str, typing.Any]:
         return dict(
@@ -61,11 +57,9 @@ class KerasAssignment(KerasBaseAssignment):
             else self.submission_deadline.isoformat(),
         )
 
-    # Cache for 16 hours
-    @cachetools.cached(cachetools.TTLCache(1, 16 * 60 * 60))
-    def validation_hash_table(self) -> ValHTType:
+    def query_validation_set(self) -> None:
         if self.validation_dataset:
-            return self.validation_dataset.validation_hash_table()
+            self._validation_hash_table = self.validation_dataset.validation_hash_table
 
         # Lookup assignment data from database
         if not Database.assignments:
@@ -73,32 +67,40 @@ class KerasAssignment(KerasBaseAssignment):
                 "Cannot load validation hash table without database"
             )
 
-        validation_hash_table: ValHTType = dict()
+        self._validation_hash_table = dict()
+        self._validation_set_size = 0
+        self._validation_set_input_hashes = []
         for key in Database.assignments.scan_iter(match=f"{self.identifier}:*"):
             _predicted, _hash, _input = Database.assignments.hmget(
                 key, "predicted", "hash", "input"
             )
-            validation_hash_table[_hash] = dict(
-                matrix=np.asarray(json.loads(_input)), predicted=_predicted
-            )
-        return validation_hash_table
+            self._validation_set_size += 1
+            self._validation_set_input_hashes.append(key)
+            self._validation_hash_table[_hash] = dict(hash=_hash, predicted=_predicted)
 
-    # Cache for 16 hours
-    @cachetools.cached(cachetools.TTLCache(1, 16 * 60 * 60))
+    @property
+    def validation_hash_table(self) -> ValHTType:
+        if not self._validation_hash_table:
+            self.query_validation_set()
+        if self._validation_hash_table:
+            return self._validation_hash_table
+        raise ValueError("Failed to load validation hash table")
+
+    @property
     def validation_set_size(self) -> int:
-        if self.validation_dataset:
-            return self.validation_dataset.validation_set_size
+        if not self._validation_set_size:
+            self.query_validation_set()
+        if self._validation_set_size:
+            return self._validation_set_size
+        raise ValueError("Failed to calculate validation set size")
 
-        # Lookup assignment data from database
-        if not Database.assignments:
-            raise NoDatabaseException(
-                "Cannot calculate validation_set_size without database"
-            )
-
-        size = 0
-        for _ in Database.assignments.scan_iter(match=f"{self.identifier}:*"):
-            size += 1
-        return size
+    @property
+    def validation_set_input_hashes(self) -> typing.List[str]:
+        if not self._validation_set_input_hashes:
+            self.query_validation_set()
+        if self._validation_set_input_hashes:
+            return self._validation_set_input_hashes
+        raise ValueError("Failed to calculate validation set input hashes")
 
     def still_open(self, date: typing.Optional[Datetime] = None) -> bool:
         with Tracer.main().start_active_span("KerasAssignment.still_open") as scope:
@@ -117,17 +119,17 @@ class KerasAssignment(KerasBaseAssignment):
                 raise SubmissionAfterDeadlineException(
                     f"The deadline for submission was on {'?' if not self.submission_deadline else self.submission_deadline.isoformat()}"
                 )
-            if not len(predictions) == self.validation_set_size():
+            if not len(predictions) == self.validation_set_size:
                 raise SubmissionValidationError(
-                    f"Expected {self.validation_set_size()} predictions"
+                    f"Expected {self.validation_set_size} predictions"
                 )
             num_correct = 0
             if not Database.assignments:
                 raise NoDatabaseException
             for matrix_hash, prediction in predictions.items():
-                reference_prediction = Database.assignments.hget(
-                    self.input_key_for(matrix_hash), "predicted"
-                )
+                reference_prediction = self.validation_hash_table.get(
+                    matrix_hash, dict()
+                ).get("predicted")
                 if reference_prediction is None:
                     raise UnknownDatasetException(
                         "Cannot validate your results. Is this the correct assignment?"
@@ -138,7 +140,7 @@ class KerasAssignment(KerasBaseAssignment):
                     if float(reference_prediction) == float(prediction):
                         num_correct += 1
 
-            accuracy = round(num_correct / self.validation_set_size(), ndigits=2)
+            accuracy = round(num_correct / self.validation_set_size, ndigits=2)
             score = round(
                 accuracy
                 if not self.grading_callback
